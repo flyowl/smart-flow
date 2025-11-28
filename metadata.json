@@ -1,0 +1,5 @@
+{
+  "name": "机房管理系统",
+  "description": "A visual data center infrastructure management system allowing drag-and-drop organization of racks and servers with AI-powered capacity planning.",
+  "requestFramePermissions": []
+}
