@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  /* Default to dark mode colors initially to prevent flash */
+  background-color: #0f172a; 
+  color: white;
+  margin: 0;
+  overflow: hidden;
+}
+/* Light mode overrides for body */
+html:not(.dark) body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.react-flow__node {
+  border-radius: 4px;
+}
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+  background: #475569; 
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b; 
+}
+
+/* Fix for Chrome/Edge white autofill background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+    -webkit-text-fill-color: white !important;
+    caret-color: white;
+}
+/* Light mode autofill fix */
+html:not(.dark) input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+/* React Flow Controls Dark Mode Override */
+.dark .react-flow__controls {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+.dark .react-flow__controls-button {
+  background: #1e293b !important;
+  border-bottom: 1px solid #334155 !important;
+  fill: #94a3b8 !important;
+}
+.dark .react-flow__controls-button:hover {
+  background: #334155 !important;
+  fill: #f8fafc !important;
+}
+
+/* Light Mode React Flow Controls */
+.react-flow__controls {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+.react-flow__controls-button {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  fill: #475569 !important;
+}
+.react-flow__controls-button:hover {
+  background: #f1f5f9 !important;
+  fill: #0f172a !important;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor !important;
+}
