@@ -40,6 +40,7 @@ const nodeTypes = {
   network: ServerNode,
   storage: ServerNode,
   firewall: ServerNode,
+  virtual_machine: ServerNode,
   zone: ZoneNode,
 };
 
@@ -63,6 +64,7 @@ const nodeColor = (node: Node) => {
   if (node.type === ItemType.NETWORK) return '#6366f1'; // indigo
   if (node.type === ItemType.FIREWALL) return '#f97316'; // orange
   if (node.type === ItemType.STORAGE) return '#06b6d4'; // cyan-500
+  if (node.type === ItemType.VIRTUAL_MACHINE) return '#a855f7'; // purple-500
   return '#10b981'; // emerald-500 (server)
 };
 
@@ -464,15 +466,15 @@ const DCIMCanvas = () => {
                      const relX = RACK_PADDING_PX; 
                      let relY = absY - rackAbs.y;
 
-                     // Snap logic
+                     // Snap logic - U数从0开始
                      const relativeYInRackArea = relY - RACK_PADDING_PX;
                      const snappedUIndex = Math.round(relativeYInRackArea / PX_PER_U);
                      const maxSlots = (targetRack.data.totalU) - (currentNode.data.uHeight || 1);
                      const clampedIndex = Math.max(0, Math.min(maxSlots, snappedUIndex));
                      const finalY = (clampedIndex * PX_PER_U) + RACK_PADDING_PX;
 
-                     // Check Slot Collision
-                     const slotStart = clampedIndex + 1;
+                     // Check Slot Collision - U数从0开始
+                     const slotStart = clampedIndex;
                      const slotEnd = slotStart + (currentNode.data.uHeight || 1) - 1;
 
                      const hasSlotCollision = nds.some(n => {
@@ -480,7 +482,7 @@ const DCIMCanvas = () => {
                          if (n.id === node.id) return false; 
                          
                          const nUHeight = n.data.uHeight || 1;
-                         const nStartU = Math.round((n.position.y - RACK_PADDING_PX) / PX_PER_U) + 1;
+                         const nStartU = Math.round((n.position.y - RACK_PADDING_PX) / PX_PER_U);
                          const nEndU = nStartU + nUHeight - 1;
                          return (slotStart <= nEndU && slotEnd >= nStartU);
                      });
@@ -584,13 +586,17 @@ const DCIMCanvas = () => {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           panOnScroll={!isSpacePressed}
-          panOnDrag={isSpacePressed || [1, 2]} 
+          panOnDrag={isSpacePressed || [1, 2]}
           selectionOnDrag={!isSpacePressed}
           fitView
           minZoom={0.05}
           maxZoom={2}
           className="bg-slate-50 dark:bg-[#0f172a]"
           proOptions={{ hideAttribution: true }}
+          connectionRadius={40}
+          connectionMode="loose"
+          snapToGrid={false}
+          snapGrid={[15, 15]}
         >
           <Background 
             variant={BackgroundVariant.Dots} 

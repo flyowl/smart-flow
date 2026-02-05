@@ -49,19 +49,19 @@ const RackNode: React.FC<NodeProps<RackData>> = ({ data, selected }) => {
       );
   }
 
-  // Generate background grid lines for U units
+  // Generate background grid lines for U units - U数从0开始
   const renderGrid = () => {
     const lines = [];
-    for (let i = 1; i <= data.totalU; i++) {
+    for (let i = 0; i < data.totalU; i++) {
       lines.push(
         <div 
           key={i} 
           className="w-full border-b border-slate-300/50 dark:border-slate-700/50 flex items-center justify-between px-1 text-[10px] text-slate-400 dark:text-slate-600 select-none font-mono"
           style={{ height: `${PX_PER_U}px` }}
         >
-          <span>{data.totalU - i + 1}</span>
+          <span>{data.totalU - i - 1}</span>
           <span className="opacity-20 w-full text-center mx-2 border-t border-slate-300/30 dark:border-slate-700/30 h-0"></span>
-          <span>{data.totalU - i + 1}</span>
+          <span>{data.totalU - i - 1}</span>
         </div>
       );
     }

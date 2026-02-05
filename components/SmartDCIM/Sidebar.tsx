@@ -2,7 +2,23 @@
 import React, { useState } from 'react';
 import { ItemType, DragItem } from './types';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  onSearch?: (query: string) => void;
+  searchQuery?: string;
+  onPrevMatch?: () => void;
+  onNextMatch?: () => void;
+  matchCount?: number;
+  currentMatchIndex?: number;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ 
+  onSearch, 
+  searchQuery = '', 
+  onPrevMatch, 
+  onNextMatch,
+  matchCount = 0,
+  currentMatchIndex = -1
+}) => {
   // State for Custom Item creation
   const [customType, setCustomType] = useState<ItemType>(ItemType.SERVER);
   const [customU, setCustomU] = useState<number>(1);
@@ -21,6 +37,41 @@ const Sidebar: React.FC = () => {
           Smart DCIM
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">数据中心基础设施管理</p>
+      </div>
+
+      {/* 搜索框 */}
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30">
+        <div className="relative">
+          <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearch?.(e.target.value)}
+            placeholder="搜索设备名称或IP..."
+            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-20 py-2 text-xs text-slate-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none placeholder-slate-400"
+          />
+          {matchCount > 0 && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                {currentMatchIndex + 1}/{matchCount}
+              </span>
+              <button
+                onClick={onPrevMatch}
+                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"
+                title="上一个"
+              >
+                <i className="fa-solid fa-chevron-up text-[10px]"></i>
+              </button>
+              <button
+                onClick={onNextMatch}
+                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 transition-colors"
+                title="下一个"
+              >
+                <i className="fa-solid fa-chevron-down text-[10px]"></i>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
@@ -110,6 +161,20 @@ const Sidebar: React.FC = () => {
                 <i className="fa-solid fa-grip-lines text-slate-400 dark:text-slate-600"></i>
                 </div>
             ))}
+            {/* 虚拟机 */}
+            <div
+                className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-dashed border-purple-300 dark:border-purple-700/50 p-2 rounded cursor-grab active:cursor-grabbing hover:border-purple-400 dark:hover:border-purple-500 transition-all flex items-center gap-3"
+                draggable
+                onDragStart={(e) => onDragStart(e, { type: ItemType.VIRTUAL_MACHINE, uHeight: 1, label: '虚拟机', cpu: 2, memory: 4 })}
+            >
+                <div className="bg-slate-100 dark:bg-slate-900 border border-dashed border-purple-500/50 rounded flex items-center justify-center h-6 w-6">
+                    <i className="fa-solid fa-cloud text-[10px] text-purple-500 dark:text-purple-400"></i>
+                </div>
+                <div className="flex-1">
+                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">虚拟机</div>
+                    <div className="text-[10px] text-slate-500">2核 / 4GB</div>
+                </div>
+            </div>
           </div>
         </div>
 
@@ -164,6 +229,97 @@ const Sidebar: React.FC = () => {
                     <div className="font-medium text-sm text-slate-700 dark:text-slate-200">4U SAN存储</div>
                 </div>
             </div>
+        </div>
+
+        {/* Software Applications */}
+        <div>
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <i className="fa-solid fa-code text-slate-400"></i> 软件应用
+          </h3>
+          <div className="space-y-2">
+            {/* Java 应用 */}
+            <div
+                className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-dashed border-pink-300 dark:border-pink-700/50 p-2 rounded cursor-grab active:cursor-grabbing hover:border-pink-400 dark:hover:border-pink-500 transition-all flex items-center gap-3"
+                draggable
+                onDragStart={(e) => onDragStart(e, { 
+                    type: ItemType.SOFTWARE, 
+                    label: 'Java服务', 
+                    techStack: 'Java/Spring',
+                    version: '1.0.0',
+                    port: 8080
+                })}
+            >
+                <div className="bg-slate-100 dark:bg-slate-900 border border-dashed border-pink-500/50 rounded flex items-center justify-center h-6 w-6">
+                    <i className="fa-brands fa-java text-[10px] text-pink-500 dark:text-pink-400"></i>
+                </div>
+                <div className="flex-1">
+                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Java 服务</div>
+                    <div className="text-[10px] text-slate-500">Spring Boot</div>
+                </div>
+            </div>
+
+            {/* Node.js 应用 */}
+            <div
+                className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-dashed border-green-300 dark:border-green-700/50 p-2 rounded cursor-grab active:cursor-grabbing hover:border-green-400 dark:hover:border-green-500 transition-all flex items-center gap-3"
+                draggable
+                onDragStart={(e) => onDragStart(e, { 
+                    type: ItemType.SOFTWARE, 
+                    label: 'Node服务', 
+                    techStack: 'Node.js/Express',
+                    version: '2.0.0',
+                    port: 3000
+                })}
+            >
+                <div className="bg-slate-100 dark:bg-slate-900 border border-dashed border-green-500/50 rounded flex items-center justify-center h-6 w-6">
+                    <i className="fa-brands fa-node-js text-[10px] text-green-500 dark:text-green-400"></i>
+                </div>
+                <div className="flex-1">
+                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Node.js 服务</div>
+                    <div className="text-[10px] text-slate-500">Express</div>
+                </div>
+            </div>
+
+            {/* Python 应用 */}
+            <div
+                className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-dashed border-blue-300 dark:border-blue-700/50 p-2 rounded cursor-grab active:cursor-grabbing hover:border-blue-400 dark:hover:border-blue-500 transition-all flex items-center gap-3"
+                draggable
+                onDragStart={(e) => onDragStart(e, { 
+                    type: ItemType.SOFTWARE, 
+                    label: 'Python服务', 
+                    techStack: 'Python/Django',
+                    version: '3.0.0',
+                    port: 8000
+                })}
+            >
+                <div className="bg-slate-100 dark:bg-slate-900 border border-dashed border-blue-500/50 rounded flex items-center justify-center h-6 w-6">
+                    <i className="fa-brands fa-python text-[10px] text-blue-500 dark:text-blue-400"></i>
+                </div>
+                <div className="flex-1">
+                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Python 服务</div>
+                    <div className="text-[10px] text-slate-500">Django/Flask</div>
+                </div>
+            </div>
+
+            {/* 通用软件 */}
+            <div
+                className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 p-2 rounded cursor-grab active:cursor-grabbing hover:border-slate-400 dark:hover:border-slate-500 transition-all flex items-center gap-3"
+                draggable
+                onDragStart={(e) => onDragStart(e, { 
+                    type: ItemType.SOFTWARE, 
+                    label: '软件应用', 
+                    techStack: 'Generic',
+                    version: '1.0.0'
+                })}
+            >
+                <div className="bg-slate-100 dark:bg-slate-900 border border-dashed border-slate-500/50 rounded flex items-center justify-center h-6 w-6">
+                    <i className="fa-solid fa-code text-[10px] text-slate-500 dark:text-slate-400"></i>
+                </div>
+                <div className="flex-1">
+                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">通用软件</div>
+                    <div className="text-[10px] text-slate-500">自定义技术栈</div>
+                </div>
+            </div>
+          </div>
         </div>
 
         {/* Custom Generator */}

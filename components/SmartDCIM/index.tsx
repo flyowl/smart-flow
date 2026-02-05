@@ -24,6 +24,7 @@ import Sidebar from './Sidebar';
 import RackNode from './nodes/RackNode';
 import ServerNode from './nodes/ServerNode';
 import ZoneNode from './nodes/ZoneNode';
+import SoftwareNode from './nodes/SoftwareNode';
 import PortConnectionEdge from './edges/PortConnectionEdge';
 import GeminiAdvisor from './GeminiAdvisor';
 import NodeDetailsPanel from './NodeDetailsPanel';
@@ -68,7 +69,9 @@ const nodeTypes = {
   network: ServerNode,
   storage: ServerNode,
   firewall: ServerNode,
+  virtual_machine: ServerNode,
   zone: ZoneNode,
+  software: SoftwareNode,
 };
 
 const edgeTypes = {
@@ -91,6 +94,8 @@ const nodeColor = (node: Node) => {
   if (node.type === ItemType.NETWORK) return '#6366f1'; // indigo
   if (node.type === ItemType.FIREWALL) return '#f97316'; // orange
   if (node.type === ItemType.STORAGE) return '#06b6d4'; // cyan-500
+  if (node.type === ItemType.VIRTUAL_MACHINE) return '#a855f7'; // purple-500
+  if (node.type === ItemType.SOFTWARE) return '#ec4899'; // pink-500
   return '#10b981'; // emerald-500 (server)
 };
 
@@ -151,6 +156,11 @@ const DCIMCanvas = () => {
 
   // Space Key State for Panning
   const [isSpacePressed, setIsSpacePressed] = useState(false);
+
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMatches, setSearchMatches] = useState<Node[]>([]);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
 
   // Theme Toggle Effect
   useEffect(() => {
@@ -227,6 +237,80 @@ const DCIMCanvas = () => {
          return node;
      }));
   }, [targetRackId, setNodes]);
+
+  // Search functionality
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchMatches([]);
+      setCurrentMatchIndex(-1);
+      // Clear all highlights
+      setNodes(nds => nds.map(node => ({
+        ...node,
+        data: { ...node.data, isSearchMatch: false, isCurrentSearchMatch: false }
+      })));
+      return;
+    }
+
+    const matches = nodes.filter(node => {
+      const data = node.data as ServerData;
+      const labelMatch = data.label?.toLowerCase().includes(query.toLowerCase());
+      const ipMatch = data.ip?.toLowerCase().includes(query.toLowerCase());
+      return labelMatch || ipMatch;
+    });
+
+    setSearchMatches(matches);
+    setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
+
+    // Update node highlights
+    setNodes(nds => nds.map(node => {
+      const isMatch = matches.some(m => m.id === node.id);
+      const isCurrent = matches.length > 0 && matches[0].id === node.id;
+      return {
+        ...node,
+        data: { ...node.data, isSearchMatch: isMatch, isCurrentSearchMatch: isCurrent }
+      };
+    }));
+
+    // Center on first match
+    if (matches.length > 0 && reactFlowInstance) {
+      const firstMatch = matches[0];
+      const nodePos = getAbsolutePosition(firstMatch, nodes);
+      reactFlowInstance.setCenter(nodePos.x + (firstMatch.width || 200) / 2, nodePos.y + (firstMatch.height || 50) / 2, { zoom: 1 });
+    }
+  }, [nodes, setNodes, reactFlowInstance]);
+
+  const handlePrevMatch = useCallback(() => {
+    if (searchMatches.length === 0) return;
+    const newIndex = currentMatchIndex <= 0 ? searchMatches.length - 1 : currentMatchIndex - 1;
+    setCurrentMatchIndex(newIndex);
+    const match = searchMatches[newIndex];
+    if (match && reactFlowInstance) {
+      const nodePos = getAbsolutePosition(match, nodes);
+      reactFlowInstance.setCenter(nodePos.x + (match.width || 200) / 2, nodePos.y + (match.height || 50) / 2, { zoom: 1 });
+      // 只高亮节点，不打开编辑框
+      setNodes(nds => nds.map(node => ({
+        ...node,
+        data: { ...node.data, isCurrentSearchMatch: node.id === match.id }
+      })));
+    }
+  }, [searchMatches, currentMatchIndex, reactFlowInstance, nodes, setNodes]);
+
+  const handleNextMatch = useCallback(() => {
+    if (searchMatches.length === 0) return;
+    const newIndex = currentMatchIndex >= searchMatches.length - 1 ? 0 : currentMatchIndex + 1;
+    setCurrentMatchIndex(newIndex);
+    const match = searchMatches[newIndex];
+    if (match && reactFlowInstance) {
+      const nodePos = getAbsolutePosition(match, nodes);
+      reactFlowInstance.setCenter(nodePos.x + (match.width || 200) / 2, nodePos.y + (match.height || 50) / 2, { zoom: 1 });
+      // 只高亮节点，不打开编辑框
+      setNodes(nds => nds.map(node => ({
+        ...node,
+        data: { ...node.data, isCurrentSearchMatch: node.id === match.id }
+      })));
+    }
+  }, [searchMatches, currentMatchIndex, reactFlowInstance, nodes, setNodes]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -372,6 +456,20 @@ const DCIMCanvas = () => {
           xOffset = width / 2;
           yOffset = height / 2;
           zIndex = Z_INDEX_RACK;
+      } else if (dragData.type === ItemType.VIRTUAL_MACHINE) {
+          // 虚拟机使用4U高度，窄宽度
+          width = 140;
+          height = 120; // 4U = 4 * 30px
+          xOffset = width / 2;
+          yOffset = height / 2;
+          zIndex = Z_INDEX_DEVICE;
+      } else if (dragData.type === ItemType.SOFTWARE) {
+          // 软件节点使用固定尺寸
+          width = 200;
+          height = 80;
+          xOffset = width / 2;
+          yOffset = height / 2;
+          zIndex = Z_INDEX_DEVICE;
       } else {
           height = (dragData.uHeight || 1) * PX_PER_U;
           width = SERVER_WIDTH_PX;
@@ -384,18 +482,23 @@ const DCIMCanvas = () => {
         id: getId(),
         type: dragData.type,
         position: {
-            x: position.x - xOffset, 
+            x: position.x - xOffset,
             y: position.y - yOffset
         },
         style: { width, height },
         zIndex: zIndex,
-        data: { 
+        data: {
             label: dragData.label,
-            totalU: dragData.totalU, 
-            uHeight: dragData.uHeight, 
+            totalU: dragData.totalU,
+            uHeight: dragData.uHeight,
             type: dragData.type,
             status: 'active',
-            description: dragData.type === ItemType.ZONE ? '拖拽调整大小...' : undefined
+            description: dragData.type === ItemType.ZONE ? '拖拽调整大小...' : undefined,
+            cpu: dragData.cpu,
+            memory: dragData.memory,
+            techStack: dragData.techStack,
+            version: dragData.version,
+            port: dragData.port
         },
       };
 
@@ -492,15 +595,15 @@ const DCIMCanvas = () => {
                      const relX = RACK_PADDING_PX; 
                      let relY = absY - rackAbs.y;
 
-                     // Snap logic
+                     // Snap logic - U数从0开始
                      const relativeYInRackArea = relY - RACK_PADDING_PX;
                      const snappedUIndex = Math.round(relativeYInRackArea / PX_PER_U);
                      const maxSlots = (targetRack.data.totalU) - (currentNode.data.uHeight || 1);
                      const clampedIndex = Math.max(0, Math.min(maxSlots, snappedUIndex));
                      const finalY = (clampedIndex * PX_PER_U) + RACK_PADDING_PX;
 
-                     // Check Slot Collision
-                     const slotStart = clampedIndex + 1;
+                     // Check Slot Collision - U数从0开始
+                     const slotStart = clampedIndex;
                      const slotEnd = slotStart + (currentNode.data.uHeight || 1) - 1;
 
                      const hasSlotCollision = nds.some(n => {
@@ -508,7 +611,7 @@ const DCIMCanvas = () => {
                          if (n.id === node.id) return false; 
                          
                          const nUHeight = n.data.uHeight || 1;
-                         const nStartU = Math.round((n.position.y - RACK_PADDING_PX) / PX_PER_U) + 1;
+                         const nStartU = Math.round((n.position.y - RACK_PADDING_PX) / PX_PER_U);
                          const nEndU = nStartU + nUHeight - 1;
                          return (slotStart <= nEndU && slotEnd >= nStartU);
                      });
@@ -590,7 +693,14 @@ const DCIMCanvas = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-white transition-colors duration-300">
-      <Sidebar />
+      <Sidebar 
+        onSearch={handleSearch}
+        searchQuery={searchQuery}
+        onPrevMatch={handlePrevMatch}
+        onNextMatch={handleNextMatch}
+        matchCount={searchMatches.length}
+        currentMatchIndex={currentMatchIndex}
+      />
       
       <div className="flex-1 h-full relative" ref={reactFlowWrapper}>
         <ReactFlow
@@ -612,13 +722,17 @@ const DCIMCanvas = () => {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           panOnScroll={!isSpacePressed}
-          panOnDrag={isSpacePressed || [1, 2]} 
+          panOnDrag={isSpacePressed || [1, 2]}
           selectionOnDrag={!isSpacePressed}
           fitView
           minZoom={0.05}
           maxZoom={2}
           className="bg-slate-50 dark:bg-[#0f172a]"
           proOptions={{ hideAttribution: true }}
+          connectionRadius={40}
+          connectionMode="loose"
+          snapToGrid={false}
+          snapGrid={[15, 15]}
         >
           <Background 
             variant={BackgroundVariant.Dots} 

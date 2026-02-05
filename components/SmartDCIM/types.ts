@@ -7,7 +7,9 @@ export enum ItemType {
   NETWORK = 'network',
   STORAGE = 'storage',
   FIREWALL = 'firewall',
-  ZONE = 'zone'
+  VIRTUAL_MACHINE = 'virtual_machine',
+  ZONE = 'zone',
+  SOFTWARE = 'software'
 }
 
 export interface ZoneData {
@@ -31,14 +33,23 @@ export interface RackData {
 export interface ServerData {
   label: string;
   uHeight: number;
-  type: ItemType; 
+  type: ItemType;
   status: 'active' | 'maintenance' | 'offline' | 'malfunction';
   model?: string;
   ip?: string;
-  assetId?: string; 
+  assetId?: string;
   contact?: string;
   description?: string;
-  isMatchedType?: boolean; 
+  isMatchedType?: boolean;
+  isSearchMatch?: boolean;
+  isCurrentSearchMatch?: boolean;
+  // 虚拟机配置
+  cpu?: number;        // CPU 核数
+  memory?: number;     // 内存大小 (GB)
+  // 软件节点配置
+  version?: string;    // 软件版本
+  port?: number;       // 服务端口号
+  techStack?: string;  // 技术栈
 }
 
 export interface PortConnectionData {
@@ -54,9 +65,15 @@ export type ZoneNode = Node<ZoneData>;
 
 export interface DragItem {
   type: ItemType;
-  uHeight?: number; 
-  totalU?: number; 
+  uHeight?: number;
+  totalU?: number;
   label?: string;
   width?: number;
   height?: number;
+  cpu?: number;       // 虚拟机 CPU 核数
+  memory?: number;    // 虚拟机内存大小 (GB)
+  // 软件节点配置
+  techStack?: string; // 技术栈
+  version?: string;   // 软件版本
+  port?: number;      // 服务端口号
 }

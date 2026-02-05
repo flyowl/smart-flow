@@ -7,6 +7,7 @@ export enum ItemType {
   NETWORK = 'network',
   STORAGE = 'storage',
   FIREWALL = 'firewall',
+  VIRTUAL_MACHINE = 'virtual_machine',
   ZONE = 'zone'
 }
 
@@ -31,14 +32,16 @@ export interface RackData {
 export interface ServerData {
   label: string;
   uHeight: number;
-  type: ItemType; 
+  type: ItemType;
   status: 'active' | 'maintenance' | 'offline' | 'malfunction';
   model?: string;
   ip?: string;
-  assetId?: string; 
+  assetId?: string;
   contact?: string;
   description?: string;
-  isMatchedType?: boolean; 
+  isMatchedType?: boolean;
+  isSearchMatch?: boolean;
+  isCurrentSearchMatch?: boolean;
 }
 
 export interface PortConnectionData {

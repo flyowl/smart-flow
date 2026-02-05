@@ -3,17 +3,59 @@ import React, { memo } from 'react';
 import { NodeProps, NodeResizer } from 'reactflow';
 import { ZoneData } from '../../types';
 
+const EDGE_HIT_AREA = 20; // 边线扩展选中范围（像素）
+
 const ZoneNode: React.FC<NodeProps<ZoneData>> = ({ data, selected }) => {
   return (
     <>
-      <NodeResizer 
-        color="#3b82f6" 
-        isVisible={selected} 
-        minWidth={100} 
-        minHeight={100} 
+      <NodeResizer
+        color="#3b82f6"
+        isVisible={selected}
+        minWidth={100}
+        minHeight={100}
+        handleStyle={{ width: 12, height: 12 }}
+        lineStyle={{ borderWidth: 2 }}
       />
-      
-      <div 
+
+      {/* 扩展的边线选中区域 - 上 */}
+      <div
+        className="absolute left-0 right-0 cursor-ns-resize z-10"
+        style={{ top: -EDGE_HIT_AREA, height: EDGE_HIT_AREA * 2 }}
+      />
+      {/* 扩展的边线选中区域 - 下 */}
+      <div
+        className="absolute left-0 right-0 cursor-ns-resize z-10"
+        style={{ bottom: -EDGE_HIT_AREA, height: EDGE_HIT_AREA * 2 }}
+      />
+      {/* 扩展的边线选中区域 - 左 */}
+      <div
+        className="absolute top-0 bottom-0 cursor-ew-resize z-10"
+        style={{ left: -EDGE_HIT_AREA, width: EDGE_HIT_AREA * 2 }}
+      />
+      {/* 扩展的边线选中区域 - 右 */}
+      <div
+        className="absolute top-0 bottom-0 cursor-ew-resize z-10"
+        style={{ right: -EDGE_HIT_AREA, width: EDGE_HIT_AREA * 2 }}
+      />
+      {/* 扩展的边线选中区域 - 四角 */}
+      <div
+        className="absolute cursor-nwse-resize z-10"
+        style={{ top: -EDGE_HIT_AREA, left: -EDGE_HIT_AREA, width: EDGE_HIT_AREA * 2, height: EDGE_HIT_AREA * 2 }}
+      />
+      <div
+        className="absolute cursor-nesw-resize z-10"
+        style={{ top: -EDGE_HIT_AREA, right: -EDGE_HIT_AREA, width: EDGE_HIT_AREA * 2, height: EDGE_HIT_AREA * 2 }}
+      />
+      <div
+        className="absolute cursor-nesw-resize z-10"
+        style={{ bottom: -EDGE_HIT_AREA, left: -EDGE_HIT_AREA, width: EDGE_HIT_AREA * 2, height: EDGE_HIT_AREA * 2 }}
+      />
+      <div
+        className="absolute cursor-nwse-resize z-10"
+        style={{ bottom: -EDGE_HIT_AREA, right: -EDGE_HIT_AREA, width: EDGE_HIT_AREA * 2, height: EDGE_HIT_AREA * 2 }}
+      />
+
+      <div
         className={`w-full h-full relative transition-all duration-300 group
             ${selected ? 'ring-2 ring-blue-400' : 'hover:ring-1 hover:ring-slate-300 dark:hover:ring-slate-600'}
         `}

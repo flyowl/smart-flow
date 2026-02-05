@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Panel, useReactFlow } from 'reactflow';
 import { ItemType } from './types';
 
@@ -40,20 +40,26 @@ const CATEGORIES = [
 const VisibilityControls: React.FC = () => {
   const { getNodes, setNodes } = useReactFlow();
   const [isOpen, setIsOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // 获取当前节点状态
+  const nodes = getNodes();
 
   // Helper to check if a category is currently considered "visible"
   // We consider it visible if at least one node of that type is NOT hidden.
-  const isCategoryVisible = (types: ItemType[]) => {
-    const nodes = getNodes();
+  const isCategoryVisible = useCallback((types: ItemType[]) => {
+    // 添加空值检查，确保 nodes 存在
+    if (!nodes || !Array.isArray(nodes)) return true;
+    
     // If no nodes of this type exist, we can default to true (checked) for the UI
     const nodesOfType = nodes.filter(n => types.includes(n.type as ItemType));
     if (nodesOfType.length === 0) return true;
     
     // Return true if found any visible node
     return nodesOfType.some(n => !n.hidden);
-  };
+  }, [nodes, refreshKey]);
 
-  const toggleCategory = (types: ItemType[]) => {
+  const toggleCategory = useCallback((types: ItemType[]) => {
     const currentlyVisible = isCategoryVisible(types);
     const shouldHide = currentlyVisible; // If visible, we want to hide.
 
@@ -65,11 +71,15 @@ const VisibilityControls: React.FC = () => {
         return node;
       })
     );
-  };
+    // 触发刷新以更新 UI
+    setRefreshKey(prev => prev + 1);
+  }, [isCategoryVisible, setNodes]);
 
-  const toggleAll = (show: boolean) => {
+  const toggleAll = useCallback((show: boolean) => {
     setNodes((nds) => nds.map(n => ({ ...n, hidden: !show })));
-  };
+    // 触发刷新以更新 UI
+    setRefreshKey(prev => prev + 1);
+  }, [setNodes]);
 
   return (
     <Panel position="top-left" className="ml-2 mt-2">

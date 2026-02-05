@@ -83,6 +83,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
      if (isPlaceholder) return 'fa-ban text-slate-500';
      if (isRack) return 'fa-server text-blue-500 dark:text-blue-400';
      if (isZone) return 'fa-layer-group text-indigo-500 dark:text-indigo-400';
+     if (isSoftware) return 'fa-code text-pink-500 dark:text-pink-400';
      const sData = data as ServerData;
      switch(sData.type) {
          case ItemType.NETWORK: return 'fa-network-wired text-indigo-500 dark:text-indigo-400';
@@ -92,10 +93,13 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
      }
   };
 
+  const isSoftware = node.type === ItemType.SOFTWARE;
+
   const getDeviceTypeLabel = () => {
       if (isPlaceholder) return '占位机柜 (Placeholder)';
       if (isRack) return '机柜详情 (Rack)';
       if (isZone) return '区域详情 (Zone)';
+      if (isSoftware) return '软件应用 (Software)';
       const sData = data as ServerData;
       switch(sData.type) {
           case ItemType.NETWORK: return '网络设备 (Network)';
@@ -230,28 +234,87 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
          {/* Height / Capacity Editing (Non-Zone) */}
          {!isZone && (
              <div>
-                 <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
-                     {isRack ? '总容量 (Total U)' : '设备高度 (Height U)'}
-                 </label>
-                 {isEditing ? (
-                     <div className="flex items-center gap-2 mt-1">
-                         <input 
-                             type="number"
-                             min="1"
-                             max={isRack ? 60 : 42}
-                             className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white font-mono focus:border-blue-500 outline-none"
-                             value={isRack ? (formData.totalU ?? 42) : (formData.uHeight ?? 1)}
-                             onChange={(e) => handleInputChange(isRack ? 'totalU' : 'uHeight', parseInt(e.target.value))}
-                         />
-                         <span className="text-xs text-slate-400 font-mono">U</span>
+                 {node.type === ItemType.VIRTUAL_MACHINE ? (
+                     // 虚拟机显示 CPU 和内存配置
+                     <div className="space-y-3">
+                         <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">资源配置</label>
+                         {isEditing ? (
+                             <div className="grid grid-cols-2 gap-2 mt-1">
+                                 <div>
+                                     <input 
+                                         type="number"
+                                         min="1"
+                                         max="128"
+                                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white font-mono focus:border-blue-500 outline-none"
+                                         value={formData.cpu ?? 2}
+                                         onChange={(e) => {
+                                             const value = e.target.value === '' ? 2 : parseInt(e.target.value);
+                                             handleInputChange('cpu', isNaN(value) ? 2 : value);
+                                         }}
+                                         placeholder="CPU"
+                                     />
+                                     <div className="text-[9px] text-slate-400 mt-0.5">CPU (核)</div>
+                                 </div>
+                                 <div>
+                                     <input 
+                                         type="number"
+                                         min="1"
+                                         max="512"
+                                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white font-mono focus:border-blue-500 outline-none"
+                                         value={formData.memory ?? 4}
+                                         onChange={(e) => {
+                                             const value = e.target.value === '' ? 4 : parseInt(e.target.value);
+                                             handleInputChange('memory', isNaN(value) ? 4 : value);
+                                         }}
+                                         placeholder="内存"
+                                     />
+                                     <div className="text-[9px] text-slate-400 mt-0.5">内存 (GB)</div>
+                                 </div>
+                             </div>
+                         ) : (
+                             <div className="flex items-center gap-4 mt-1">
+                                 <div className="flex items-center gap-1">
+                                     <i className="fa-solid fa-microchip text-purple-500 dark:text-purple-400 text-xs"></i>
+                                     <span className="text-sm font-mono font-bold text-purple-600 dark:text-purple-400">
+                                         {(data as ServerData).cpu ?? 2} 核
+                                     </span>
+                                 </div>
+                                 <div className="flex items-center gap-1">
+                                     <i className="fa-solid fa-memory text-purple-500 dark:text-purple-400 text-xs"></i>
+                                     <span className="text-sm font-mono font-bold text-purple-600 dark:text-purple-400">
+                                         {(data as ServerData).memory ?? 4} GB
+                                     </span>
+                                 </div>
+                             </div>
+                         )}
                      </div>
                  ) : (
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-lg font-mono font-bold ${isRack ? 'text-blue-500 dark:text-blue-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
-                            {isRack ? (data as RackData).totalU : (data as ServerData).uHeight}
-                        </span>
-                        <span className="text-xs text-slate-500 font-bold mt-1">U</span>
-                    </div>
+                     // 普通设备显示 U 高度
+                     <>
+                         <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                             {isRack ? '总容量 (Total U)' : '设备高度 (Height U)'}
+                         </label>
+                         {isEditing ? (
+                             <div className="flex items-center gap-2 mt-1">
+                                 <input 
+                                     type="number"
+                                     min="1"
+                                     max={isRack ? 60 : 42}
+                                     className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white font-mono focus:border-blue-500 outline-none"
+                                     value={isRack ? (formData.totalU ?? 42) : (formData.uHeight ?? 1)}
+                                     onChange={(e) => handleInputChange(isRack ? 'totalU' : 'uHeight', parseInt(e.target.value))}
+                                 />
+                                 <span className="text-xs text-slate-400 font-mono">U</span>
+                             </div>
+                         ) : (
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className={`text-lg font-mono font-bold ${isRack ? 'text-blue-500 dark:text-blue-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
+                                    {isRack ? (data as RackData).totalU : (data as ServerData).uHeight}
+                                </span>
+                                <span className="text-xs text-slate-500 font-bold mt-1">U</span>
+                            </div>
+                         )}
+                     </>
                  )}
              </div>
          )}
@@ -280,7 +343,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
                 <div>
                      <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">IP Address</label>
                      {isEditing ? (
-                         <input 
+                         <input
                              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 font-mono focus:border-blue-500 outline-none"
                              value={formData.ip || ''}
                              placeholder="192.168.1.10"
@@ -293,65 +356,128 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
                      )}
                 </div>
 
-                {/* Model */}
-                <div>
-                     <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">型号 / Model</label>
-                     {isEditing ? (
-                         <input 
-                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 focus:border-blue-500 outline-none"
-                             value={formData.model || ''}
-                             placeholder="Dell PowerEdge R750"
-                             onChange={(e) => handleInputChange('model', e.target.value)}
-                         />
-                     ) : (
-                         <div className="text-slate-700 dark:text-slate-300 text-xs mt-1">
-                             {formData.model || 'N/A'}
-                         </div>
-                     )}
-                </div>
-
-                {/* Contact Person */}
-                <div>
-                     <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">联系人 / Contact</label>
-                     {isEditing ? (
-                         <input 
-                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 focus:border-blue-500 outline-none"
-                             value={formData.contact || ''}
-                             placeholder="Ops Team A"
-                             onChange={(e) => handleInputChange('contact', e.target.value)}
-                         />
-                     ) : (
-                         <div className="text-slate-700 dark:text-slate-300 text-xs mt-1 flex items-center gap-2">
-                             <i className="fa-regular fa-user text-slate-400 dark:text-slate-500"></i>
-                             {formData.contact || 'N/A'}
-                         </div>
-                     )}
-                </div>
-                 
-                 <div>
-                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">运行状态 / Status</label>
+               {/* Model */}
+               <div>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">型号 / Model</label>
                     {isEditing ? (
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                            {STATUS_OPTIONS.map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    onClick={() => handleInputChange('status', opt.value)}
-                                    className={`
-                                        flex items-center gap-2 p-2 rounded border transition-all text-xs
-                                        ${formData.status === opt.value 
-                                            ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 ring-1 ring-blue-500 text-blue-700 dark:text-blue-100' 
-                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}
-                                    `}
-                                >
-                                    <div className={`w-2 h-2 rounded-full ${opt.color} flex-shrink-0`}></div>
-                                    <span className="truncate">{opt.label.split('(')[0]}</span>
-                                </button>
-                            ))}
-                        </div>
+                        <input
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 focus:border-blue-500 outline-none"
+                            value={formData.model || ''}
+                            placeholder="Dell PowerEdge R750"
+                            onChange={(e) => handleInputChange('model', e.target.value)}
+                        />
                     ) : (
-                        renderStatusDisplay((data as ServerData).status)
+                        <div className="text-slate-700 dark:text-slate-300 text-xs mt-1">
+                            {formData.model || 'N/A'}
+                        </div>
                     )}
-                 </div>
+               </div>
+
+               {/* Contact Person */}
+               <div>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">联系人 / Contact</label>
+                    {isEditing ? (
+                        <input
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 focus:border-blue-500 outline-none"
+                            value={formData.contact || ''}
+                            placeholder="Ops Team A"
+                            onChange={(e) => handleInputChange('contact', e.target.value)}
+                        />
+                    ) : (
+                        <div className="text-slate-700 dark:text-slate-300 text-xs mt-1 flex items-center gap-2">
+                            <i className="fa-regular fa-user text-slate-400 dark:text-slate-500"></i>
+                            {formData.contact || 'N/A'}
+                        </div>
+                    )}
+               </div>
+
+                {/* 软件节点专属字段 */}
+                {isSoftware && (
+                    <>
+                        {/* 技术栈 */}
+                        <div>
+                            <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">技术栈 / Tech Stack</label>
+                            {isEditing ? (
+                                <input
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 focus:border-pink-500 outline-none"
+                                    value={formData.techStack || ''}
+                                    placeholder="Java/Spring Boot"
+                                    onChange={(e) => handleInputChange('techStack', e.target.value)}
+                                />
+                            ) : (
+                                <div className="text-slate-700 dark:text-slate-300 text-xs mt-1 flex items-center gap-2">
+                                    <i className="fa-solid fa-code text-pink-500 dark:text-pink-400"></i>
+                                    {formData.techStack || 'N/A'}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 版本号 */}
+                        <div>
+                            <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">版本 / Version</label>
+                            {isEditing ? (
+                                <input
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 font-mono focus:border-pink-500 outline-none"
+                                    value={formData.version || ''}
+                                    placeholder="1.0.0"
+                                    onChange={(e) => handleInputChange('version', e.target.value)}
+                                />
+                            ) : (
+                                <div className="text-slate-700 dark:text-slate-300 text-xs mt-1 bg-pink-50 dark:bg-pink-900/20 px-2 py-1 rounded inline-block font-mono">
+                                    v{formData.version || '1.0.0'}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 端口号 */}
+                        <div>
+                            <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">端口 / Port</label>
+                            {isEditing ? (
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="65535"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 font-mono focus:border-pink-500 outline-none"
+                                    value={formData.port || ''}
+                                    placeholder="8080"
+                                    onChange={(e) => {
+                                        const value = e.target.value === '' ? '' : parseInt(e.target.value);
+                                        handleInputChange('port', isNaN(value as number) ? '' : value);
+                                    }}
+                                />
+                            ) : (
+                                <div className="text-slate-700 dark:text-slate-300 text-xs mt-1 font-mono">
+                                    :{formData.port || '8080'}
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+
+                <div>
+                   <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">运行状态 / Status</label>
+                   {isEditing ? (
+                       <div className="grid grid-cols-2 gap-2 mt-2">
+                           {STATUS_OPTIONS.map((opt) => (
+                               <button
+                                   key={opt.value}
+                                   onClick={() => handleInputChange('status', opt.value)}
+                                   className={`
+                                       flex items-center gap-2 p-2 rounded border transition-all text-xs
+                                       ${formData.status === opt.value
+                                           ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 ring-1 ring-blue-500 text-blue-700 dark:text-blue-100'
+                                           : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}
+                                   `}
+                               >
+                                   <div className={`w-2 h-2 rounded-full ${opt.color} flex-shrink-0`}></div>
+                                   <span className="truncate">{opt.label.split('(')[0]}</span>
+                               </button>
+                           ))}
+                       </div>
+                   ) : (
+                       renderStatusDisplay((data as ServerData).status)
+                   )}
+                </div>
              </div>
          )}
          
