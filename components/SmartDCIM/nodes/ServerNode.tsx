@@ -110,20 +110,20 @@ Model: ${data.model || 'N/A'}
           </div>
 
           {/* 名称 */}
-          <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 text-center leading-tight truncate w-full" title={data.label}>
+          <span className="text-[10px] font-bold text-slate-100 text-center leading-tight truncate w-full" title={data.label}>
               {data.label}
           </span>
 
           {/* 配置 */}
-          <span className="text-[9px] text-purple-700 dark:text-purple-300 font-mono font-bold bg-purple-100 dark:bg-purple-900/30 px-1.5 py-0.5 rounded">
+          <span className="text-[9px] text-purple-300 font-mono font-bold bg-purple-900/30 px-1.5 py-0.5 rounded">
               {data.cpu || 2}C/{data.memory || 4}G
           </span>
 
           {/* IP */}
           {data.ip && (
-              <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded w-full justify-center">
-                  <i className="fa-solid fa-network-wired text-[7px] text-blue-500 dark:text-blue-400"></i>
-                  <span className="text-[8px] text-blue-700 dark:text-blue-300 font-mono truncate" title={data.ip}>
+              <div className="flex items-center gap-1 bg-blue-900/20 px-1.5 py-0.5 rounded w-full justify-center">
+                  <i className="fa-solid fa-network-wired text-[7px] text-blue-400"></i>
+                  <span className="text-[8px] text-blue-300 font-mono truncate" title={data.ip}>
                       {data.ip}
                   </span>
               </div>
@@ -131,9 +131,9 @@ Model: ${data.model || 'N/A'}
 
           {/* 型号 */}
           {data.model && (
-              <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded w-full justify-center">
-                  <i className="fa-solid fa-server text-[7px] text-slate-500 dark:text-slate-400"></i>
-                  <span className="text-[8px] text-slate-700 dark:text-slate-300 truncate" title={data.model}>
+              <div className="flex items-center gap-1 bg-slate-800/50 px-1.5 py-0.5 rounded w-full justify-center">
+                  <i className="fa-solid fa-server text-[7px] text-slate-400"></i>
+                  <span className="text-[8px] text-slate-300 truncate" title={data.model}>
                       {data.model}
                   </span>
               </div>
@@ -141,9 +141,9 @@ Model: ${data.model || 'N/A'}
 
           {/* 联系人 */}
           {data.contact && (
-              <div className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded w-full justify-center">
-                  <i className="fa-solid fa-user text-[7px] text-emerald-500 dark:text-emerald-400"></i>
-                  <span className="text-[8px] text-emerald-700 dark:text-emerald-300 truncate" title={data.contact}>
+              <div className="flex items-center gap-1 bg-emerald-900/20 px-1.5 py-0.5 rounded w-full justify-center">
+                  <i className="fa-solid fa-user text-[7px] text-emerald-400"></i>
+                  <span className="text-[8px] text-emerald-300 truncate" title={data.contact}>
                       {data.contact}
                   </span>
               </div>
@@ -210,7 +210,7 @@ Model: ${data.model || 'N/A'}
             <div className="flex flex-col gap-1 shrink-0">
                 <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(data.status)}`}></div>
             </div>
-            <div className="h-full border-r border-slate-300 dark:border-white/10 mx-1 shrink-0"></div>
+            <div className="h-full border-r border-white/10 mx-1 shrink-0"></div>
             
             {/* Device Icon */}
             <div className="w-6 flex justify-center shrink-0">
@@ -218,20 +218,20 @@ Model: ${data.model || 'N/A'}
             </div>
 
             <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight truncate max-w-[220px]" title={data.label}>
+                <span className="text-sm font-bold text-slate-100 leading-tight truncate max-w-[220px]" title={data.label}>
                     {data.label}
                 </span>
                 <div className="flex items-center gap-2 mt-0.5">
-                     <span className="text-xs text-slate-500 dark:text-slate-400 font-mono leading-tight truncate max-w-[140px]">
+                     <span className="text-xs text-slate-400 font-mono leading-tight truncate max-w-[140px]">
                         {data.model || 'GENERIC'}
                     </span>
                     {data.assetId && (
-                        <span className="text-[10px] text-yellow-700 dark:text-yellow-300 font-mono bg-yellow-100 dark:bg-yellow-900/40 px-1.5 rounded border border-yellow-200 dark:border-yellow-700/30 shrink-0">
+                        <span className="text-[10px] text-yellow-300 font-mono bg-yellow-900/40 px-1.5 rounded border border-yellow-700/30 shrink-0">
                             {data.assetId}
                         </span>
                     )}
                     {data.ip && (
-                        <span className="text-[10px] text-blue-700 dark:text-blue-300 font-mono bg-blue-100 dark:bg-blue-900/40 px-1.5 rounded hidden group-hover:inline-block shrink-0">
+                        <span className="text-[10px] text-blue-300 font-mono bg-blue-900/40 px-1.5 rounded shrink-0">
                             {data.ip}
                         </span>
                     )}
@@ -243,11 +243,11 @@ Model: ${data.model || 'N/A'}
         <div className="flex items-center gap-3 z-10">
              {/* Fake Ports - vary color by type */}
             <div className="flex gap-1 opacity-50">
-                 <div className="w-2.5 h-2.5 bg-slate-800/10 dark:bg-black/40 border border-slate-400 dark:border-white/20 rounded-[1px]"></div>
-                 <div className="w-2.5 h-2.5 bg-slate-800/10 dark:bg-black/40 border border-slate-400 dark:border-white/20 rounded-[1px]"></div>
+                 <div className="w-2.5 h-2.5 bg-black/40 border border-white/20 rounded-[1px]"></div>
+                 <div className="w-2.5 h-2.5 bg-black/40 border border-white/20 rounded-[1px]"></div>
             </div>
-            <div className="bg-slate-100 dark:bg-black/20 px-1.5 py-0.5 rounded border border-slate-300 dark:border-white/10 shrink-0">
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono font-bold">{data.uHeight}U</span>
+            <div className="bg-black/20 px-1.5 py-0.5 rounded border border-white/10 shrink-0">
+                <span className="text-xs text-slate-300 font-mono font-bold">{data.uHeight}U</span>
             </div>
         </div>
 

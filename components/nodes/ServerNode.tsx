@@ -101,27 +101,27 @@ Model: ${data.model || 'N/A'}
             <div className="flex flex-col gap-1 shrink-0">
                 <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(data.status)}`}></div>
             </div>
-            <div className="h-full border-r border-slate-300 dark:border-white/10 mx-1 shrink-0"></div>
+            <div className="h-full border-r border-white/10 mx-1 shrink-0"></div>
 
             <div className="w-6 flex justify-center shrink-0">
                  <i className={`fa-solid ${getDeviceIcon()} text-sm`}></i>
             </div>
 
             <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight truncate max-w-[220px]" title={data.label}>
+                <span className="text-sm font-bold text-slate-100 leading-tight truncate max-w-[220px]" title={data.label}>
                     {data.label}
                 </span>
                 <div className="flex items-center gap-2 mt-0.5">
-                     <span className="text-xs text-slate-500 dark:text-slate-400 font-mono leading-tight truncate max-w-[140px]">
+                     <span className="text-xs text-slate-400 font-mono leading-tight truncate max-w-[140px]">
                         {data.model || 'GENERIC'}
                     </span>
                     {data.assetId && (
-                        <span className="text-[10px] text-yellow-700 dark:text-yellow-300 font-mono bg-yellow-100 dark:bg-yellow-900/40 px-1.5 rounded border border-yellow-200 dark:border-yellow-700/30 shrink-0">
+                        <span className="text-[10px] text-yellow-300 font-mono bg-yellow-900/40 px-1.5 rounded border border-yellow-700/30 shrink-0">
                             {data.assetId}
                         </span>
                     )}
                     {data.ip && (
-                        <span className="text-[10px] text-blue-700 dark:text-blue-300 font-mono bg-blue-100 dark:bg-blue-900/40 px-1.5 rounded hidden group-hover:inline-block shrink-0">
+                        <span className="text-[10px] text-blue-300 font-mono bg-blue-900/40 px-1.5 rounded shrink-0">
                             {data.ip}
                         </span>
                     )}
@@ -131,11 +131,11 @@ Model: ${data.model || 'N/A'}
 
         <div className="flex items-center gap-3 z-10">
             <div className="flex gap-1 opacity-50">
-                 <div className="w-2.5 h-2.5 bg-slate-800/10 dark:bg-black/40 border border-slate-400 dark:border-white/20 rounded-[1px]"></div>
-                 <div className="w-2.5 h-2.5 bg-slate-800/10 dark:bg-black/40 border border-slate-400 dark:border-white/20 rounded-[1px]"></div>
+                 <div className="w-2.5 h-2.5 bg-black/40 border border-white/20 rounded-[1px]"></div>
+                 <div className="w-2.5 h-2.5 bg-black/40 border border-white/20 rounded-[1px]"></div>
             </div>
-            <div className="bg-slate-100 dark:bg-black/20 px-1.5 py-0.5 rounded border border-slate-300 dark:border-white/10 shrink-0">
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono font-bold">{data.uHeight}U</span>
+            <div className="bg-black/20 px-1.5 py-0.5 rounded border border-white/10 shrink-0">
+                <span className="text-xs text-slate-300 font-mono font-bold">{data.uHeight}U</span>
             </div>
         </div>
 
