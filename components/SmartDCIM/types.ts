@@ -28,6 +28,9 @@ export interface RackData {
   assetId?: string; 
   isMatchedType?: boolean; 
   isDropTarget?: boolean;
+  // 拖拽预览U位位置
+  previewUPosition?: number | null;  // 实时预览的U位位置（从底部开始，0 = 底部）
+  previewUHeight?: number;           // 预览设备的U高度
 }
 
 export interface ServerData {

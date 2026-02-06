@@ -32,7 +32,7 @@ import EdgeDetailsPanel from './EdgeDetailsPanel';
 import ContextMenu from './ContextMenu';
 import VisibilityControls from './VisibilityControls';
 import { DragItem, ItemType, ServerData } from './types';
-import { PX_PER_U, RACK_PADDING_PX, RACK_WIDTH_PX, SERVER_WIDTH_PX } from './constants';
+import { PX_PER_U, RACK_PADDING_PX, RACK_WIDTH_PX, SERVER_WIDTH_PX, RACK_HEADER_HEIGHT_PX } from './constants';
 
 // --- Error Suppression Logic (Moved from root index.tsx) ---
 const resizeErrorMessages = [
@@ -451,7 +451,7 @@ const DCIMCanvas = () => {
           yOffset = height / 2;
           zIndex = Z_INDEX_ZONE;
       } else if (dragData.type === ItemType.RACK || dragData.type === ItemType.PLACEHOLDER) {
-          height = (dragData.totalU || 42) * PX_PER_U + (RACK_PADDING_PX * 2);
+          height = (dragData.totalU || 42) * PX_PER_U + (RACK_PADDING_PX * 2) + RACK_HEADER_HEIGHT_PX;
           width = RACK_WIDTH_PX;
           xOffset = width / 2;
           yOffset = height / 2;
@@ -512,11 +512,23 @@ const DCIMCanvas = () => {
      dragStartNodeRef.current = JSON.parse(JSON.stringify(node));
   }, []);
 
-  // Handle Dragging Visuals (Highlight Target Rack)
+  // Handle Dragging Visuals (Highlight Target Rack & Calculate U Position)
   const onNodeDrag: NodeDragHandler = useCallback((event, node) => {
       // Don't highlight racks if we are dragging a rack or a zone
       if (node.type === ItemType.RACK || node.type === ItemType.PLACEHOLDER || node.type === ItemType.ZONE) {
-          if (targetRackId) setTargetRackId(null);
+          if (targetRackId) {
+              setTargetRackId(null);
+              // 清除所有机柜的预览位置
+              setNodes((nds) => nds.map((n) => {
+                  if (n.type === ItemType.RACK || n.type === ItemType.PLACEHOLDER) {
+                      return {
+                          ...n,
+                          data: { ...n.data, previewUPosition: null, previewUHeight: undefined }
+                      };
+                  }
+                  return n;
+              }));
+          }
           return;
       }
 
@@ -524,33 +536,68 @@ const DCIMCanvas = () => {
       const currentNodes = getNodes();
 
       // Calculate absolute rect of dragged node
-      // Note: During drag, 'node' has the current position.
-      // If it has a parent, position is relative to parent. We need absolute world coordinates for collision.
       const absPos = getAbsolutePosition(node, currentNodes);
-      const nodeRect = { 
-          x: absPos.x, 
-          y: absPos.y, 
-          width: node.width || SERVER_WIDTH_PX, 
-          height: node.height || 40 
+      const nodeHeight = node.height || (node.data?.uHeight || 1) * PX_PER_U;
+      const nodeRect = {
+          x: absPos.x,
+          y: absPos.y,
+          width: node.width || SERVER_WIDTH_PX,
+          height: nodeHeight
       };
 
       // Find first rack that intersects
       const hoveredRack = currentNodes.find(n => {
           if (n.type !== ItemType.RACK && n.type !== ItemType.PLACEHOLDER) return false;
-          if (n.id === node.id) return false; 
+          if (n.id === node.id) return false;
 
           const rackAbs = getAbsolutePosition(n, currentNodes);
-          const rackW = n.width || RACK_WIDTH_PX;
-          const rackH = n.height || ((n.data.totalU * PX_PER_U) + RACK_PADDING_PX * 2);
-          
+          const rackW = RACK_WIDTH_PX;
+          const rackTotalU = n.data.totalU || 42;
+          const rackH = (rackTotalU * PX_PER_U) + (RACK_PADDING_PX * 2) + RACK_HEADER_HEIGHT_PX;
+
           return checkCollision(nodeRect, { x: rackAbs.x, y: rackAbs.y, width: rackW, height: rackH });
       });
 
       const newTargetId = hoveredRack ? hoveredRack.id : null;
+
+      // 计算实时U位位置
+      let previewUPosition: number | null = null;
+      let previewUHeight = node.data?.uHeight || 1;
+
+      if (hoveredRack) {
+          const rackAbs = getAbsolutePosition(hoveredRack, currentNodes);
+          const nodeCenterY = absPos.y + nodeHeight / 2;
+          const relY = nodeCenterY - rackAbs.y - RACK_HEADER_HEIGHT_PX;
+          const rackInnerHeight = hoveredRack.data.totalU * PX_PER_U;
+          const relativeYInRackArea = relY - RACK_PADDING_PX;
+
+          // 将Y位置转换为从底部开始的U位置（0 = 底部）
+          const uPositionFromBottom = Math.round((rackInnerHeight - relativeYInRackArea) / PX_PER_U);
+          const maxU = hoveredRack.data.totalU - previewUHeight;
+          previewUPosition = Math.max(0, Math.min(maxU, uPositionFromBottom));
+      }
+
+      // 更新节点状态
+      setNodes((nds) => nds.map((n) => {
+          if (n.type === ItemType.RACK || n.type === ItemType.PLACEHOLDER) {
+              const isTarget = n.id === newTargetId;
+              return {
+                  ...n,
+                  data: {
+                      ...n.data,
+                      isDropTarget: isTarget,
+                      previewUPosition: isTarget ? previewUPosition : null,
+                      previewUHeight: isTarget ? previewUHeight : undefined
+                  }
+              };
+          }
+          return n;
+      }));
+
       if (newTargetId !== targetRackId) {
           setTargetRackId(newTargetId);
       }
-  }, [getNodes, targetRackId]);
+  }, [getNodes, targetRackId, setNodes]);
 
   // Enhanced Drag Stop Handler with Multi-Level Collision Logic
   const onNodeDragStop: NodeDragHandler = useCallback(
@@ -563,11 +610,21 @@ const DCIMCanvas = () => {
         }
 
         setNodes((nds) => {
-            const currentNode = nds.find(n => n.id === node.id);
-            if (!currentNode) return nds;
+            // 首先清除所有机柜的预览位置
+            const clearedNodes = nds.map((n) => {
+                if (n.type === ItemType.RACK || n.type === ItemType.PLACEHOLDER) {
+                    return {
+                        ...n,
+                        data: { ...n.data, previewUPosition: null, previewUHeight: undefined, isDropTarget: false }
+                    };
+                }
+                return n;
+            });
+            const currentNode = clearedNodes.find(n => n.id === node.id);
+            if (!currentNode) return clearedNodes;
 
             // 1. Calculate Absolute Position of the dragged node
-            const absPos = getAbsolutePosition(currentNode, nds);
+            const absPos = getAbsolutePosition(currentNode, clearedNodes);
             const absX = absPos.x;
             const absY = absPos.y;
 
@@ -580,49 +637,69 @@ const DCIMCanvas = () => {
 
             if (isDevice) {
                  // Priority 1: Check Racks
-                 const rackNodes = nds.filter(n => n.type === ItemType.RACK && n.id !== node.id);
+                 const rackNodes = clearedNodes.filter(n => n.type === ItemType.RACK && n.id !== node.id);
                  const targetRack = rackNodes.find(rack => {
-                     const rackAbs = getAbsolutePosition(rack, nds);
-                     const rackW = rack.width || RACK_WIDTH_PX;
-                     const rackH = rack.height || ((rack.data.totalU * PX_PER_U) + RACK_PADDING_PX * 2);
+                     const rackAbs = getAbsolutePosition(rack, clearedNodes);
+                     const rackW = RACK_WIDTH_PX;
+                     const rackTotalU = rack.data.totalU || 42;
+                     const rackH = (rackTotalU * PX_PER_U) + (RACK_PADDING_PX * 2) + RACK_HEADER_HEIGHT_PX;
                      const rackRect = { x: rackAbs.x, y: rackAbs.y, width: rackW, height: rackH };
                      return checkCollision(nodeAbsRect, rackRect);
                  });
 
                  if (targetRack) {
                      // Attach to Rack
-                     const rackAbs = getAbsolutePosition(targetRack, nds);
-                     const relX = RACK_PADDING_PX; 
-                     let relY = absY - rackAbs.y;
+                     const rackAbs = getAbsolutePosition(targetRack, clearedNodes);
+                     const relX = RACK_PADDING_PX;
+                     // 使用节点中心点计算U位置，更准确
+                     const nodeHeight = currentNode.height || (currentNode.data.uHeight || 1) * PX_PER_U;
+                     const nodeCenterY = absY + nodeHeight / 2;
+                     // 减去 Header 高度，得到相对于机柜内部区域的位置
+                     const relY = nodeCenterY - rackAbs.y - RACK_HEADER_HEIGHT_PX;
 
-                     // Snap logic - U数从0开始
+                     // Snap logic - 使用从底部开始的U位置（底部为0，顶部为totalU-1）
+                     // 机柜渲染时：i=0（顶部）显示 totalU-1，i=totalU-1（底部）显示 0
+                     // 为了与用户视觉一致，我们从底部开始计算U位置
+                     const rackInnerHeight = targetRack.data.totalU * PX_PER_U;
                      const relativeYInRackArea = relY - RACK_PADDING_PX;
-                     const snappedUIndex = Math.round(relativeYInRackArea / PX_PER_U);
-                     const maxSlots = (targetRack.data.totalU) - (currentNode.data.uHeight || 1);
-                     const clampedIndex = Math.max(0, Math.min(maxSlots, snappedUIndex));
-                     const finalY = (clampedIndex * PX_PER_U) + RACK_PADDING_PX;
 
-                     // Check Slot Collision - U数从0开始
-                     const slotStart = clampedIndex;
-                     const slotEnd = slotStart + (currentNode.data.uHeight || 1) - 1;
+                     // 将Y位置转换为从底部开始的U位置（0 = 底部）
+                     // 限制范围在有效U格子内
+                     const uPositionFromBottom = Math.round((rackInnerHeight - relativeYInRackArea) / PX_PER_U);
+                     const deviceUHeight = currentNode.data.uHeight || 1;
+                     const maxU = targetRack.data.totalU - deviceUHeight;
+                     const clampedU = Math.max(0, Math.min(maxU, uPositionFromBottom));
 
-                     const hasSlotCollision = nds.some(n => {
+                     // 将U位置转换回从顶部开始的Y坐标用于存储
+                     // 设备顶部对齐到U格子的顶部
+                     const targetIndexFromTop = (targetRack.data.totalU - deviceUHeight) - clampedU;
+                     // finalY 是相对于机柜的坐标，需要加上 Header 高度
+                     const finalY = (targetIndexFromTop * PX_PER_U) + RACK_PADDING_PX + RACK_HEADER_HEIGHT_PX;
+
+                     // Check Slot Collision - 使用从底部开始的U位置
+                     const slotStart = clampedU;
+                     const slotEnd = slotStart + deviceUHeight - 1;
+
+                     const hasSlotCollision = clearedNodes.some(n => {
                          if (n.parentId !== targetRack.id) return false;
-                         if (n.id === node.id) return false; 
-                         
+                         if (n.id === node.id) return false;
+
                          const nUHeight = n.data.uHeight || 1;
-                         const nStartU = Math.round((n.position.y - RACK_PADDING_PX) / PX_PER_U);
-                         const nEndU = nStartU + nUHeight - 1;
-                         return (slotStart <= nEndU && slotEnd >= nStartU);
+                         // 将存储的Y坐标转换回从底部开始的U位置
+                         // 现在存储的Y坐标包含了 Header 高度，需要先减去
+                         const nIndexFromTop = Math.round((n.position.y - RACK_PADDING_PX - RACK_HEADER_HEIGHT_PX) / PX_PER_U);
+                         const nUFromBottom = (targetRack.data.totalU - nUHeight) - nIndexFromTop;
+                         const nEndU = nUFromBottom + nUHeight - 1;
+                         return (slotStart <= nEndU && slotEnd >= nUFromBottom);
                      });
 
                      if (hasSlotCollision) {
                          // Revert
-                         return nds.map(n => n.id === node.id && dragStartNodeRef.current ? dragStartNodeRef.current : n);
+                         return clearedNodes.map(n => n.id === node.id && dragStartNodeRef.current ? dragStartNodeRef.current : n);
                      }
 
                      // Success: Parent is Rack
-                     return nds.map(n => n.id === node.id ? {
+                     return clearedNodes.map(n => n.id === node.id ? {
                          ...n,
                          parentId: targetRack.id,
                          position: { x: relX, y: finalY },
@@ -633,10 +710,10 @@ const DCIMCanvas = () => {
 
             // -- LOGIC FOR RACKS AND LOOSE DEVICES (Priority 2: Zones) --
             // If we didn't hit a rack (or we are a rack), check Zones
-            const zoneNodes = nds.filter(n => n.type === ItemType.ZONE && n.id !== node.id);
+            const zoneNodes = clearedNodes.filter(n => n.type === ItemType.ZONE && n.id !== node.id);
             // Sort zones by z-index or simply find first one. Since zones don't overlap usually, finding one is enough.
             const targetZone = zoneNodes.find(zone => {
-                 const zoneAbs = getAbsolutePosition(zone, nds);
+                 const zoneAbs = getAbsolutePosition(zone, clearedNodes);
                  // We rely on style width/height for zones as they are resizable
                  const zoneW = parseInt(zone.style?.width as string) || zone.width || 400;
                  const zoneH = parseInt(zone.style?.height as string) || zone.height || 300;
@@ -646,11 +723,11 @@ const DCIMCanvas = () => {
 
             if (targetZone) {
                 // Attach to Zone
-                const zoneAbs = getAbsolutePosition(targetZone, nds);
+                const zoneAbs = getAbsolutePosition(targetZone, clearedNodes);
                 const relX = absX - zoneAbs.x;
                 const relY = absY - zoneAbs.y;
 
-                return nds.map(n => n.id === node.id ? {
+                return clearedNodes.map(n => n.id === node.id ? {
                     ...n,
                     parentId: targetZone.id,
                     position: { x: relX, y: relY },
@@ -664,22 +741,22 @@ const DCIMCanvas = () => {
             
             // Check for collision with other items in canvas (only for devices vs devices to avoid overlap)
             if (isDevice) {
-                const hasOverlap = nds.some(n => {
+                const hasOverlap = clearedNodes.some(n => {
                     if (n.id === node.id) return false;
                     if (n.type === ItemType.RACK || n.type === ItemType.PLACEHOLDER || n.type === ItemType.ZONE) return false;
 
-                    const nAbs = getAbsolutePosition(n, nds);
+                    const nAbs = getAbsolutePosition(n, clearedNodes);
                     const nRect = { x: nAbs.x, y: nAbs.y, width: n.width || SERVER_WIDTH_PX, height: n.height || 30 };
                     return checkCollision(nodeAbsRect, nRect);
                 });
 
                 if (hasOverlap) {
-                    return nds.map(n => n.id === node.id && dragStartNodeRef.current ? dragStartNodeRef.current : n);
+                    return clearedNodes.map(n => n.id === node.id && dragStartNodeRef.current ? dragStartNodeRef.current : n);
                 }
             }
 
             // Detach completely
-            return nds.map(n => n.id === node.id ? {
+            return clearedNodes.map(n => n.id === node.id ? {
                 ...n,
                 parentId: undefined,
                 position: { x: absX, y: absY },

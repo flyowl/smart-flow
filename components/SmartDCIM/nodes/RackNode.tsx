@@ -2,16 +2,18 @@
 import React, { memo } from 'react';
 import { NodeProps } from 'reactflow';
 import { RackData, ItemType } from '../types';
-import { PX_PER_U, RACK_WIDTH_PX, RACK_PADDING_PX } from '../constants';
+import { PX_PER_U, RACK_WIDTH_PX, RACK_PADDING_PX, RACK_HEADER_HEIGHT_PX } from '../constants';
 
 const RackNode: React.FC<NodeProps<RackData>> = ({ data, selected }) => {
-  // Calculate total height based on U count + top/bottom padding
+  // Calculate total height based on U count + top/bottom padding + header
   const innerHeight = data.totalU * PX_PER_U;
-  const totalHeight = innerHeight + (RACK_PADDING_PX * 2);
+  const totalHeight = innerHeight + (RACK_PADDING_PX * 2) + RACK_HEADER_HEIGHT_PX;
 
   const isPlaceholder = data.type === ItemType.PLACEHOLDER;
   const isHighlighted = data.isMatchedType;
   const isDropTarget = data.isDropTarget;
+  const previewUPosition = data.previewUPosition;
+  const previewUHeight = data.previewUHeight || 1;
 
   // Render Placeholder View
   if (isPlaceholder) {
@@ -68,6 +70,28 @@ const RackNode: React.FC<NodeProps<RackData>> = ({ data, selected }) => {
     return lines;
   };
 
+  // 计算预览位置的样式
+  const getPreviewIndicator = () => {
+    if (previewUPosition === null || previewUPosition === undefined) return null;
+
+    // 从底部开始的U位置转换为从顶部开始的像素位置
+    // previewUPosition 是从底部开始的（0 = 底部）
+    // 需要计算指示器在机柜内部区域的位置
+    const previewTopFromBottom = previewUPosition * PX_PER_U;
+    const previewHeight = previewUHeight * PX_PER_U;
+    const rackInnerHeight = data.totalU * PX_PER_U;
+    
+    // 从顶部计算位置（机柜内部区域的顶部是 RACK_PADDING_PX）
+    const previewTop = RACK_PADDING_PX + (rackInnerHeight - previewTopFromBottom - previewHeight);
+
+    return {
+      top: `${previewTop}px`,
+      height: `${previewHeight}px`,
+    };
+  };
+
+  const previewStyle = getPreviewIndicator();
+
   return (
     <div 
       className={`relative bg-gray-100 dark:bg-slate-800 border-2 rounded-lg shadow-xl dark:shadow-2xl transition-all duration-300 group flex flex-col items-center
@@ -111,6 +135,58 @@ const RackNode: React.FC<NodeProps<RackData>> = ({ data, selected }) => {
           <div className="absolute right-0 top-[20px] bottom-[20px] w-[20px] bg-slate-200/50 dark:bg-slate-800/50 border-l border-slate-300/50 dark:border-slate-700/50 flex flex-col items-center justify-around py-1 z-10">
               {Array.from({length: 8}).map((_,i) => <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700"></div>)}
           </div>
+
+          {/* 左侧 U 位位置指示器 */}
+          {previewStyle && (
+            <div 
+              className="absolute left-0 w-[20px] z-20 pointer-events-none"
+              style={{ 
+                top: previewStyle.top, 
+                height: previewStyle.height 
+              }}
+            >
+              {/* 高亮背景 */}
+              <div className="absolute inset-0 bg-emerald-500/30 dark:bg-emerald-400/30 border-y-2 border-emerald-500 dark:border-emerald-400"></div>
+              {/* U 位数字标签 */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-500 dark:bg-emerald-400 text-white dark:text-slate-900 text-[9px] font-bold px-1 py-0.5 rounded whitespace-nowrap shadow-sm">
+                U{previewUPosition}
+              </div>
+            </div>
+          )}
+
+          {/* 右侧 U 位位置指示器 */}
+          {previewStyle && (
+            <div 
+              className="absolute right-0 w-[20px] z-20 pointer-events-none"
+              style={{ 
+                top: previewStyle.top, 
+                height: previewStyle.height 
+              }}
+            >
+              {/* 高亮背景 */}
+              <div className="absolute inset-0 bg-emerald-500/30 dark:bg-emerald-400/30 border-y-2 border-emerald-500 dark:border-emerald-400"></div>
+              {/* U 位数字标签 */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-500 dark:bg-emerald-400 text-white dark:text-slate-900 text-[9px] font-bold px-1 py-0.5 rounded whitespace-nowrap shadow-sm">
+                U{previewUPosition + previewUHeight - 1}
+              </div>
+            </div>
+          )}
+
+          {/* 中央预览区域高亮 */}
+          {previewStyle && (
+            <div 
+              className="absolute left-[20px] right-[20px] z-10 pointer-events-none bg-emerald-400/10 dark:bg-emerald-400/10 border-y-2 border-dashed border-emerald-400/50 dark:border-emerald-400/50"
+              style={{ 
+                top: previewStyle.top, 
+                height: previewStyle.height 
+              }}
+            >
+              {/* 中央提示文字 */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-500/80 dark:bg-emerald-400/80 text-white dark:text-slate-900 text-xs font-bold px-2 py-1 rounded shadow-md">
+                {previewUHeight}U @ U{previewUPosition}-{previewUPosition + previewUHeight - 1}
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );
