@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
 
 body {
   /* Default to dark mode colors initially to prevent flash */
@@ -82,4 +82,66 @@ html:not(.dark) input:-webkit-autofill {
 
 .react-flow__controls-button svg {
   fill: currentColor !important;
+}
+
+/* React Flow Handle Styles - Connection Points - High Specificity to Override Default */
+.react-flow__handle.react-flow__handle {
+  position: absolute !important;
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+  min-height: 12px !important;
+  background: #cbd5e1 !important;
+  border: 2px solid #94a3b8 !important;
+  border-radius: 50% !important;
+  cursor: crosshair !important;
+  pointer-events: all !important;
+  z-index: 50 !important;
+  transition: all 0.2s ease !important;
+}
+
+.dark .react-flow__handle.react-flow__handle {
+  background: #475569 !important;
+  border-color: #64748b !important;
+}
+
+.react-flow__handle.react-flow__handle:hover {
+  background: #3b82f6 !important;
+  border-color: #93c5fd !important;
+  transform: scale(1.3) !important;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.6) !important;
+}
+
+.react-flow__handle-top.react-flow__handle-top {
+  top: -6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+.react-flow__handle-bottom.react-flow__handle-bottom {
+  bottom: -6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+.react-flow__handle-left.react-flow__handle-left {
+  left: -6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+.react-flow__handle-right.react-flow__handle-right {
+  right: -6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+.react-flow__handle.connecting {
+  background: #3b82f6 !important;
+  border-color: #93c5fd !important;
+}
+
+.react-flow__handle.valid {
+  background: #10b981 !important;
+  border-color: #6ee7b7 !important;
 }
