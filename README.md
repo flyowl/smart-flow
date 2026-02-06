@@ -1,7 +1,15 @@
+[方块智联AI 团队开发](https://www.bintelai.com)
+
+
 # Smart Flow
 
-一个基于 React 和 ReactFlow 的数据中心基础设施管理（DCIM）可视化系统，支持拖拽式节点管理、AI 智能辅助和实时状态监控。
 
+
+一个基于 React 和 ReactFlow 的数据中心基础设施管理（DCIM）可视化系统，支持拖拽式节点管理、AI 智能辅助和实时状态监控，用于和其他运维系统整合，属于智能运维模块之一。
+
+## 其他模块
+[aissh助手](https://github.com/bintelAI/aissh)
+[机房视图模块](https://github.com/flyowl/smart-flow)
 ## ✨ 特性
 
 - 🎨 **可视化节点管理** - 支持区域（Zone）、机柜（Rack）、服务器、网络设备、存储设备、防火墙、虚拟机等多种节点类型
@@ -151,3 +159,4 @@ MIT
 ## 📮 联系方式
 
 如有问题或建议，请通过 Issue 联系我们。
+
