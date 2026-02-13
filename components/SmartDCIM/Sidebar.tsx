@@ -212,6 +212,33 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
+        {/* UDF - 配线设施 */}
+        <div>
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <i className="fa-solid fa-ethernet text-slate-400"></i> 配线设施
+          </h3>
+          <div className="space-y-2">
+            <div
+                className="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-200 dark:border-teal-900/50 p-2 rounded cursor-grab active:cursor-grabbing hover:border-teal-400 dark:hover:border-teal-500 transition-all flex items-center gap-3"
+                draggable
+                onDragStart={(e) => onDragStart(e, { 
+                    type: ItemType.UDF, 
+                    label: '光纤配线架',
+                    fiberPorts: 24,
+                    networkPorts: 24
+                })}
+            >
+                <div className="bg-slate-100 dark:bg-slate-900 border border-teal-500/50 rounded flex items-center justify-center h-6 w-6">
+                    <i className="fa-solid fa-ethernet text-[10px] text-teal-500 dark:text-teal-400"></i>
+                </div>
+                <div className="flex-1">
+                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">UDF 配线架</div>
+                    <div className="text-[10px] text-slate-500">光纤/网口架 - 吸附机柜顶部</div>
+                </div>
+            </div>
+          </div>
+        </div>
+
         {/* Storage */}
         <div>
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">

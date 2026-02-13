@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Node, useReactFlow } from 'reactflow';
-import { ItemType, RackData, ServerData, ZoneData } from './types';
+import { ItemType, RackData, ServerData, ZoneData, UdfData } from './types';
 import { PX_PER_U, RACK_PADDING_PX } from './constants';
 
 interface NodeDetailsPanelProps {
@@ -22,7 +22,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
   const [isEditing, setIsEditing] = useState(initialEditing);
   
   // Local state for editing. We use a union type for flexibility.
-  const [formData, setFormData] = useState<Partial<ServerData & RackData & ZoneData>>({});
+  const [formData, setFormData] = useState<Partial<ServerData & RackData & ZoneData & UdfData>>({});
 
   useEffect(() => {
     setIsEditing(initialEditing);
@@ -39,6 +39,8 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
   const isRack = node.type === ItemType.RACK || node.type === ItemType.PLACEHOLDER;
   const isPlaceholder = node.type === ItemType.PLACEHOLDER;
   const isZone = node.type === ItemType.ZONE;
+  const isSoftware = node.type === ItemType.SOFTWARE;
+  const isUdf = node.type === ItemType.UDF;
   
   const data = node.data;
 
@@ -84,6 +86,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
      if (isRack) return 'fa-server text-blue-500 dark:text-blue-400';
      if (isZone) return 'fa-layer-group text-indigo-500 dark:text-indigo-400';
      if (isSoftware) return 'fa-code text-pink-500 dark:text-pink-400';
+     if (isUdf) return 'fa-ethernet text-teal-500 dark:text-teal-400';
      const sData = data as ServerData;
      switch(sData.type) {
          case ItemType.NETWORK: return 'fa-network-wired text-indigo-500 dark:text-indigo-400';
@@ -93,13 +96,12 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
      }
   };
 
-  const isSoftware = node.type === ItemType.SOFTWARE;
-
   const getDeviceTypeLabel = () => {
       if (isPlaceholder) return '占位机柜 (Placeholder)';
       if (isRack) return '机柜详情 (Rack)';
       if (isZone) return '区域详情 (Zone)';
       if (isSoftware) return '软件应用 (Software)';
+      if (isUdf) return '配线架 (UDF)';
       const sData = data as ServerData;
       switch(sData.type) {
           case ItemType.NETWORK: return '网络设备 (Network)';
@@ -394,7 +396,6 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
                 {/* 软件节点专属字段 */}
                 {isSoftware && (
                     <>
-                        {/* 技术栈 */}
                         <div>
                             <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">技术栈 / Tech Stack</label>
                             {isEditing ? (
@@ -412,7 +413,6 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
                             )}
                         </div>
 
-                        {/* 版本号 */}
                         <div>
                             <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">版本 / Version</label>
                             {isEditing ? (
@@ -429,7 +429,6 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
                             )}
                         </div>
 
-                        {/* 端口号 */}
                         <div>
                             <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">端口 / Port</label>
                             {isEditing ? (
@@ -450,6 +449,64 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
                                     :{formData.port || '8080'}
                                 </div>
                             )}
+                        </div>
+                    </>
+                )}
+
+                {/* UDF 节点专属字段 */}
+                {isUdf && (
+                    <>
+                        <div>
+                            <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">光纤口数量 / Fiber Ports</label>
+                            {isEditing ? (
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="96"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 font-mono focus:border-teal-500 outline-none"
+                                    value={formData.fiberPorts ?? 24}
+                                    onChange={(e) => {
+                                        const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                        handleInputChange('fiberPorts', isNaN(value) ? 0 : value);
+                                    }}
+                                />
+                            ) : (
+                                <div className="text-slate-700 dark:text-slate-300 text-xs mt-1 flex items-center gap-2">
+                                    <i className="fa-solid fa-circle text-amber-400 text-[8px]"></i>
+                                    <span className="font-mono font-bold text-amber-500">{(data as UdfData).fiberPorts ?? 24}</span>
+                                    <span className="text-slate-500">口</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">网口数量 / Network Ports</label>
+                            {isEditing ? (
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="96"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs text-slate-900 dark:text-white mt-1 font-mono focus:border-teal-500 outline-none"
+                                    value={formData.networkPorts ?? 24}
+                                    onChange={(e) => {
+                                        const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                        handleInputChange('networkPorts', isNaN(value) ? 0 : value);
+                                    }}
+                                />
+                            ) : (
+                                <div className="text-slate-700 dark:text-slate-300 text-xs mt-1 flex items-center gap-2">
+                                    <i className="fa-solid fa-circle text-blue-400 text-[8px]"></i>
+                                    <span className="font-mono font-bold text-blue-500">{(data as UdfData).networkPorts ?? 24}</span>
+                                    <span className="text-slate-500">口</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-teal-50 dark:bg-teal-900/20 p-2 rounded border border-teal-200 dark:border-teal-800/30">
+                            <div className="text-[10px] text-teal-600 dark:text-teal-400 font-medium">
+                                <i className="fa-solid fa-info-circle mr-1"></i>
+                                总端口: {((data as UdfData).fiberPorts ?? 24) + ((data as UdfData).networkPorts ?? 24)} 口
+                            </div>
                         </div>
                     </>
                 )}
@@ -475,7 +532,7 @@ const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({ node, onClose, isEd
                            ))}
                        </div>
                    ) : (
-                       renderStatusDisplay((data as ServerData).status)
+                       renderStatusDisplay((data as ServerData | UdfData).status)
                    )}
                 </div>
              </div>

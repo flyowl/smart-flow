@@ -9,7 +9,8 @@ export enum ItemType {
   FIREWALL = 'firewall',
   VIRTUAL_MACHINE = 'virtual_machine',
   ZONE = 'zone',
-  SOFTWARE = 'software'
+  SOFTWARE = 'software',
+  UDF = 'udf'
 }
 
 export interface ZoneData {
@@ -46,13 +47,24 @@ export interface ServerData {
   isMatchedType?: boolean;
   isSearchMatch?: boolean;
   isCurrentSearchMatch?: boolean;
-  // 虚拟机配置
-  cpu?: number;        // CPU 核数
-  memory?: number;     // 内存大小 (GB)
-  // 软件节点配置
-  version?: string;    // 软件版本
-  port?: number;       // 服务端口号
-  techStack?: string;  // 技术栈
+  cpu?: number;
+  memory?: number;
+  version?: string;
+  port?: number;
+  techStack?: string;
+}
+
+export interface UdfData {
+  label: string;
+  fiberPorts: number;
+  networkPorts: number;
+  status: 'active' | 'maintenance' | 'offline' | 'malfunction';
+  model?: string;
+  assetId?: string;
+  description?: string;
+  isMatchedType?: boolean;
+  isSearchMatch?: boolean;
+  isCurrentSearchMatch?: boolean;
 }
 
 export interface PortConnectionData {
@@ -65,6 +77,7 @@ export interface PortConnectionData {
 export type RackNode = Node<RackData>;
 export type ServerNode = Node<ServerData>;
 export type ZoneNode = Node<ZoneData>;
+export type UdfNode = Node<UdfData>;
 
 export interface DragItem {
   type: ItemType;
@@ -73,10 +86,11 @@ export interface DragItem {
   label?: string;
   width?: number;
   height?: number;
-  cpu?: number;       // 虚拟机 CPU 核数
-  memory?: number;    // 虚拟机内存大小 (GB)
-  // 软件节点配置
-  techStack?: string; // 技术栈
-  version?: string;   // 软件版本
-  port?: number;      // 服务端口号
+  cpu?: number;
+  memory?: number;
+  techStack?: string;
+  version?: string;
+  port?: number;
+  fiberPorts?: number;
+  networkPorts?: number;
 }

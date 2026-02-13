@@ -25,14 +25,15 @@ import RackNode from './nodes/RackNode';
 import ServerNode from './nodes/ServerNode';
 import ZoneNode from './nodes/ZoneNode';
 import SoftwareNode from './nodes/SoftwareNode';
-import PortConnectionEdge from './edges/PortConnectionEdge';
+import UdfNode from './nodes/UdfNode';
+import PortConnectionEdge from '../edges/PortConnectionEdge';
 import GeminiAdvisor from './GeminiAdvisor';
 import NodeDetailsPanel from './NodeDetailsPanel';
 import EdgeDetailsPanel from './EdgeDetailsPanel';
 import ContextMenu from './ContextMenu';
 import VisibilityControls from './VisibilityControls';
 import { DragItem, ItemType, ServerData } from './types';
-import { PX_PER_U, RACK_PADDING_PX, RACK_WIDTH_PX, SERVER_WIDTH_PX, RACK_HEADER_HEIGHT_PX } from './constants';
+import { PX_PER_U, RACK_PADDING_PX, RACK_WIDTH_PX, SERVER_WIDTH_PX, RACK_HEADER_HEIGHT_PX, UDF_WIDTH_PX, UDF_HEIGHT_PX, DEFAULT_FIBER_PORTS, DEFAULT_NETWORK_PORTS } from './constants';
 
 // --- Error Suppression Logic (Moved from root index.tsx) ---
 const resizeErrorMessages = [
@@ -72,6 +73,7 @@ const nodeTypes = {
   virtual_machine: ServerNode,
   zone: ZoneNode,
   software: SoftwareNode,
+  udf: UdfNode,
 };
 
 const edgeTypes = {
@@ -88,15 +90,16 @@ const getId = () => `dnd_${id++}_${Date.now()}`;
 
 // MiniMap node color helper
 const nodeColor = (node: Node) => {
-  if (node.type === ItemType.ZONE) return '#e0e7ff'; // indigo-100
-  if (node.type === ItemType.RACK) return '#64748b'; // slate-500
-  if (node.type === ItemType.PLACEHOLDER) return '#94a3b8'; // slate-400
-  if (node.type === ItemType.NETWORK) return '#6366f1'; // indigo
-  if (node.type === ItemType.FIREWALL) return '#f97316'; // orange
-  if (node.type === ItemType.STORAGE) return '#06b6d4'; // cyan-500
-  if (node.type === ItemType.VIRTUAL_MACHINE) return '#a855f7'; // purple-500
-  if (node.type === ItemType.SOFTWARE) return '#ec4899'; // pink-500
-  return '#10b981'; // emerald-500 (server)
+  if (node.type === ItemType.ZONE) return '#e0e7ff';
+  if (node.type === ItemType.RACK) return '#64748b';
+  if (node.type === ItemType.PLACEHOLDER) return '#94a3b8';
+  if (node.type === ItemType.NETWORK) return '#6366f1';
+  if (node.type === ItemType.FIREWALL) return '#f97316';
+  if (node.type === ItemType.STORAGE) return '#06b6d4';
+  if (node.type === ItemType.VIRTUAL_MACHINE) return '#a855f7';
+  if (node.type === ItemType.SOFTWARE) return '#ec4899';
+  if (node.type === ItemType.UDF) return '#14b8a6';
+  return '#10b981';
 };
 
 // --- HELPER FUNCTIONS FOR COLLISION ---
@@ -464,9 +467,14 @@ const DCIMCanvas = () => {
           yOffset = height / 2;
           zIndex = Z_INDEX_DEVICE;
       } else if (dragData.type === ItemType.SOFTWARE) {
-          // 软件节点使用固定尺寸
           width = 200;
           height = 80;
+          xOffset = width / 2;
+          yOffset = height / 2;
+          zIndex = Z_INDEX_DEVICE;
+      } else if (dragData.type === ItemType.UDF) {
+          width = UDF_WIDTH_PX;
+          height = UDF_HEIGHT_PX;
           xOffset = width / 2;
           yOffset = height / 2;
           zIndex = Z_INDEX_DEVICE;
@@ -498,7 +506,9 @@ const DCIMCanvas = () => {
             memory: dragData.memory,
             techStack: dragData.techStack,
             version: dragData.version,
-            port: dragData.port
+            port: dragData.port,
+            fiberPorts: dragData.fiberPorts ?? DEFAULT_FIBER_PORTS,
+            networkPorts: dragData.networkPorts ?? DEFAULT_NETWORK_PORTS
         },
       };
 
@@ -514,11 +524,9 @@ const DCIMCanvas = () => {
 
   // Handle Dragging Visuals (Highlight Target Rack & Calculate U Position)
   const onNodeDrag: NodeDragHandler = useCallback((event, node) => {
-      // Don't highlight racks if we are dragging a rack or a zone
       if (node.type === ItemType.RACK || node.type === ItemType.PLACEHOLDER || node.type === ItemType.ZONE) {
           if (targetRackId) {
               setTargetRackId(null);
-              // 清除所有机柜的预览位置
               setNodes((nds) => nds.map((n) => {
                   if (n.type === ItemType.RACK || n.type === ItemType.PLACEHOLDER) {
                       return {
@@ -532,20 +540,62 @@ const DCIMCanvas = () => {
           return;
       }
 
-      // Get current snapshot of nodes for collision check
       const currentNodes = getNodes();
-
-      // Calculate absolute rect of dragged node
       const absPos = getAbsolutePosition(node, currentNodes);
-      const nodeHeight = node.height || (node.data?.uHeight || 1) * PX_PER_U;
+      
+      const isUdf = node.type === ItemType.UDF;
+      const nodeHeight = isUdf ? UDF_HEIGHT_PX : (node.height || (node.data?.uHeight || 1) * PX_PER_U);
+      const nodeWidth = isUdf ? UDF_WIDTH_PX : (node.width || SERVER_WIDTH_PX);
+      
       const nodeRect = {
           x: absPos.x,
           y: absPos.y,
-          width: node.width || SERVER_WIDTH_PX,
+          width: nodeWidth,
           height: nodeHeight
       };
 
-      // Find first rack that intersects
+      if (isUdf) {
+          const hoveredRack = currentNodes.find(n => {
+              if (n.type !== ItemType.RACK) return false;
+              if (n.id === node.id) return false;
+
+              const rackAbs = getAbsolutePosition(n, currentNodes);
+              const rackW = RACK_WIDTH_PX;
+              const rackTotalU = n.data.totalU || 42;
+              const rackH = (rackTotalU * PX_PER_U) + (RACK_PADDING_PX * 2) + RACK_HEADER_HEIGHT_PX;
+              
+              const rackTopArea = {
+                  x: rackAbs.x,
+                  y: rackAbs.y - UDF_HEIGHT_PX,
+                  width: rackW,
+                  height: UDF_HEIGHT_PX + 20
+              };
+
+              return checkCollision(nodeRect, rackTopArea);
+          });
+
+          const newTargetId = hoveredRack ? hoveredRack.id : null;
+
+          setNodes((nds) => nds.map((n) => {
+              if (n.type === ItemType.RACK) {
+                  const isTarget = n.id === newTargetId;
+                  return {
+                      ...n,
+                      data: {
+                          ...n.data,
+                          isDropTarget: isTarget
+                      }
+                  };
+              }
+              return n;
+          }));
+
+          if (newTargetId !== targetRackId) {
+              setTargetRackId(newTargetId);
+          }
+          return;
+      }
+
       const hoveredRack = currentNodes.find(n => {
           if (n.type !== ItemType.RACK && n.type !== ItemType.PLACEHOLDER) return false;
           if (n.id === node.id) return false;
@@ -560,7 +610,6 @@ const DCIMCanvas = () => {
 
       const newTargetId = hoveredRack ? hoveredRack.id : null;
 
-      // 计算实时U位位置
       let previewUPosition: number | null = null;
       let previewUHeight = node.data?.uHeight || 1;
 
@@ -571,13 +620,11 @@ const DCIMCanvas = () => {
           const rackInnerHeight = hoveredRack.data.totalU * PX_PER_U;
           const relativeYInRackArea = relY - RACK_PADDING_PX;
 
-          // 将Y位置转换为从底部开始的U位置（0 = 底部）
           const uPositionFromBottom = Math.round((rackInnerHeight - relativeYInRackArea) / PX_PER_U);
           const maxU = hoveredRack.data.totalU - previewUHeight;
           previewUPosition = Math.max(0, Math.min(maxU, uPositionFromBottom));
       }
 
-      // 更新节点状态
       setNodes((nds) => nds.map((n) => {
           if (n.type === ItemType.RACK || n.type === ItemType.PLACEHOLDER) {
               const isTarget = n.id === newTargetId;
@@ -602,15 +649,13 @@ const DCIMCanvas = () => {
   // Enhanced Drag Stop Handler with Multi-Level Collision Logic
   const onNodeDragStop: NodeDragHandler = useCallback(
     (event, node) => {
-        setTargetRackId(null); // Clear highlight on drop
+        setTargetRackId(null);
 
-        // ZONES themselves do not get parented into anything for now
         if (node.type === ItemType.ZONE) {
             return;
         }
 
         setNodes((nds) => {
-            // 首先清除所有机柜的预览位置
             const clearedNodes = nds.map((n) => {
                 if (n.type === ItemType.RACK || n.type === ItemType.PLACEHOLDER) {
                     return {
@@ -623,20 +668,88 @@ const DCIMCanvas = () => {
             const currentNode = clearedNodes.find(n => n.id === node.id);
             if (!currentNode) return clearedNodes;
 
-            // 1. Calculate Absolute Position of the dragged node
             const absPos = getAbsolutePosition(currentNode, clearedNodes);
             const absX = absPos.x;
             const absY = absPos.y;
 
-            const nodeWidth = node.width || (currentNode.width) || SERVER_WIDTH_PX;
-            const nodeHeight = node.height || (currentNode.height) || 30;
+            const isUdf = node.type === ItemType.UDF;
+            const nodeWidth = isUdf ? UDF_WIDTH_PX : (node.width || (currentNode.width) || SERVER_WIDTH_PX);
+            const nodeHeight = isUdf ? UDF_HEIGHT_PX : (node.height || (currentNode.height) || 30);
             const nodeAbsRect = { x: absX, y: absY, width: nodeWidth, height: nodeHeight };
 
-            // -- LOGIC FOR DEVICES (Servers, etc) --
+            if (isUdf) {
+                const rackNodes = clearedNodes.filter(n => n.type === ItemType.RACK && n.id !== node.id);
+                const targetRack = rackNodes.find(rack => {
+                    const rackAbs = getAbsolutePosition(rack, clearedNodes);
+                    const rackW = RACK_WIDTH_PX;
+                    const rackTotalU = rack.data.totalU || 42;
+                    const rackH = (rackTotalU * PX_PER_U) + (RACK_PADDING_PX * 2) + RACK_HEADER_HEIGHT_PX;
+                    
+                    const rackTopArea = {
+                        x: rackAbs.x,
+                        y: rackAbs.y - UDF_HEIGHT_PX,
+                        width: rackW,
+                        height: UDF_HEIGHT_PX + 20
+                    };
+                    return checkCollision(nodeAbsRect, rackTopArea);
+                });
+
+                if (targetRack) {
+                    const rackAbs = getAbsolutePosition(targetRack, clearedNodes);
+                    const relX = 0;
+                    const relY = -UDF_HEIGHT_PX;
+
+                    const hasUdfOnTop = clearedNodes.some(n => {
+                        if (n.parentId !== targetRack.id) return false;
+                        if (n.id === node.id) return false;
+                        return n.type === ItemType.UDF;
+                    });
+
+                    if (hasUdfOnTop) {
+                        return clearedNodes.map(n => n.id === node.id && dragStartNodeRef.current ? dragStartNodeRef.current : n);
+                    }
+
+                    return clearedNodes.map(n => n.id === node.id ? {
+                        ...n,
+                        parentId: targetRack.id,
+                        position: { x: relX, y: relY },
+                        zIndex: Z_INDEX_DEVICE
+                    } : n);
+                }
+
+                const zoneNodes = clearedNodes.filter(n => n.type === ItemType.ZONE && n.id !== node.id);
+                const targetZone = zoneNodes.find(zone => {
+                    const zoneAbs = getAbsolutePosition(zone, clearedNodes);
+                    const zoneW = parseInt(zone.style?.width as string) || zone.width || 400;
+                    const zoneH = parseInt(zone.style?.height as string) || zone.height || 300;
+                    const zoneRect = { x: zoneAbs.x, y: zoneAbs.y, width: zoneW, height: zoneH };
+                    return checkCollision(nodeAbsRect, zoneRect);
+                });
+
+                if (targetZone) {
+                    const zoneAbs = getAbsolutePosition(targetZone, clearedNodes);
+                    const relX = absX - zoneAbs.x;
+                    const relY = absY - zoneAbs.y;
+
+                    return clearedNodes.map(n => n.id === node.id ? {
+                        ...n,
+                        parentId: targetZone.id,
+                        position: { x: relX, y: relY },
+                        zIndex: Z_INDEX_DEVICE
+                    } : n);
+                }
+
+                return clearedNodes.map(n => n.id === node.id ? {
+                    ...n,
+                    parentId: undefined,
+                    position: { x: absX, y: absY },
+                    zIndex: Z_INDEX_DEVICE
+                } : n);
+            }
+
             const isDevice = node.type !== ItemType.RACK && node.type !== ItemType.PLACEHOLDER;
 
             if (isDevice) {
-                 // Priority 1: Check Racks
                  const rackNodes = clearedNodes.filter(n => n.type === ItemType.RACK && n.id !== node.id);
                  const targetRack = rackNodes.find(rack => {
                      const rackAbs = getAbsolutePosition(rack, clearedNodes);
@@ -648,35 +761,23 @@ const DCIMCanvas = () => {
                  });
 
                  if (targetRack) {
-                     // Attach to Rack
                      const rackAbs = getAbsolutePosition(targetRack, clearedNodes);
                      const relX = RACK_PADDING_PX;
-                     // 使用节点中心点计算U位置，更准确
                      const nodeHeight = currentNode.height || (currentNode.data.uHeight || 1) * PX_PER_U;
                      const nodeCenterY = absY + nodeHeight / 2;
-                     // 减去 Header 高度，得到相对于机柜内部区域的位置
                      const relY = nodeCenterY - rackAbs.y - RACK_HEADER_HEIGHT_PX;
 
-                     // Snap logic - 使用从底部开始的U位置（底部为0，顶部为totalU-1）
-                     // 机柜渲染时：i=0（顶部）显示 totalU-1，i=totalU-1（底部）显示 0
-                     // 为了与用户视觉一致，我们从底部开始计算U位置
                      const rackInnerHeight = targetRack.data.totalU * PX_PER_U;
                      const relativeYInRackArea = relY - RACK_PADDING_PX;
 
-                     // 将Y位置转换为从底部开始的U位置（0 = 底部）
-                     // 限制范围在有效U格子内
                      const uPositionFromBottom = Math.round((rackInnerHeight - relativeYInRackArea) / PX_PER_U);
                      const deviceUHeight = currentNode.data.uHeight || 1;
                      const maxU = targetRack.data.totalU - deviceUHeight;
                      const clampedU = Math.max(0, Math.min(maxU, uPositionFromBottom));
 
-                     // 将U位置转换回从顶部开始的Y坐标用于存储
-                     // 设备顶部对齐到U格子的顶部
                      const targetIndexFromTop = (targetRack.data.totalU - deviceUHeight) - clampedU;
-                     // finalY 是相对于机柜的坐标，需要加上 Header 高度
-                     const finalY = (targetIndexFromTop * PX_PER_U) + RACK_PADDING_PX + RACK_HEADER_HEIGHT_PX;
+                     const finalY = (targetIndexFromTop * PX_PER_U) + RACK_PADDING_PX;
 
-                     // Check Slot Collision - 使用从底部开始的U位置
                      const slotStart = clampedU;
                      const slotEnd = slotStart + deviceUHeight - 1;
 
@@ -685,20 +786,16 @@ const DCIMCanvas = () => {
                          if (n.id === node.id) return false;
 
                          const nUHeight = n.data.uHeight || 1;
-                         // 将存储的Y坐标转换回从底部开始的U位置
-                         // 现在存储的Y坐标包含了 Header 高度，需要先减去
-                         const nIndexFromTop = Math.round((n.position.y - RACK_PADDING_PX - RACK_HEADER_HEIGHT_PX) / PX_PER_U);
+                         const nIndexFromTop = Math.round((n.position.y - RACK_PADDING_PX) / PX_PER_U);
                          const nUFromBottom = (targetRack.data.totalU - nUHeight) - nIndexFromTop;
                          const nEndU = nUFromBottom + nUHeight - 1;
                          return (slotStart <= nEndU && slotEnd >= nUFromBottom);
                      });
 
                      if (hasSlotCollision) {
-                         // Revert
                          return clearedNodes.map(n => n.id === node.id && dragStartNodeRef.current ? dragStartNodeRef.current : n);
                      }
 
-                     // Success: Parent is Rack
                      return clearedNodes.map(n => n.id === node.id ? {
                          ...n,
                          parentId: targetRack.id,
@@ -708,13 +805,9 @@ const DCIMCanvas = () => {
                  }
             }
 
-            // -- LOGIC FOR RACKS AND LOOSE DEVICES (Priority 2: Zones) --
-            // If we didn't hit a rack (or we are a rack), check Zones
             const zoneNodes = clearedNodes.filter(n => n.type === ItemType.ZONE && n.id !== node.id);
-            // Sort zones by z-index or simply find first one. Since zones don't overlap usually, finding one is enough.
             const targetZone = zoneNodes.find(zone => {
                  const zoneAbs = getAbsolutePosition(zone, clearedNodes);
-                 // We rely on style width/height for zones as they are resizable
                  const zoneW = parseInt(zone.style?.width as string) || zone.width || 400;
                  const zoneH = parseInt(zone.style?.height as string) || zone.height || 300;
                  const zoneRect = { x: zoneAbs.x, y: zoneAbs.y, width: zoneW, height: zoneH };
@@ -768,6 +861,59 @@ const DCIMCanvas = () => {
     [setNodes]
   );
 
+  // 鼠标悬停事件处理 - 显示机柜内节点的U位位置
+  const onNodeMouseEnter = useCallback((event: React.MouseEvent, node: Node) => {
+    // 只处理机柜内的设备节点
+    if (!node.parentId) return;
+    
+    const currentNodes = getNodes();
+    const parentNode = currentNodes.find(n => n.id === node.parentId);
+    
+    // 只处理机柜父节点
+    if (!parentNode || (parentNode.type !== ItemType.RACK && parentNode.type !== ItemType.PLACEHOLDER)) return;
+    
+    // 计算节点的U位位置（从底部开始）
+    const nodeUHeight = node.data?.uHeight || 1;
+    const rackTotalU = parentNode.data.totalU || 42;
+    
+    // 将存储的Y坐标转换回从底部开始的U位置
+    const nIndexFromTop = Math.round((node.position.y - RACK_PADDING_PX) / PX_PER_U);
+    const uPositionFromBottom = (rackTotalU - nodeUHeight) - nIndexFromTop;
+    
+    // 更新机柜的预览数据
+    setNodes((nds) => nds.map((n) => {
+      if (n.id === parentNode.id) {
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            previewUPosition: uPositionFromBottom,
+            previewUHeight: nodeUHeight
+          }
+        };
+      }
+      return n;
+    }));
+  }, [getNodes, setNodes]);
+
+  // 鼠标离开事件处理 - 清除U位位置显示
+  const onNodeMouseLeave = useCallback(() => {
+    // 清除所有机柜的预览位置
+    setNodes((nds) => nds.map((n) => {
+      if (n.type === ItemType.RACK || n.type === ItemType.PLACEHOLDER) {
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            previewUPosition: null,
+            previewUHeight: undefined
+          }
+        };
+      }
+      return n;
+    }));
+  }, [setNodes]);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-white transition-colors duration-300">
       <Sidebar 
@@ -793,6 +939,8 @@ const DCIMCanvas = () => {
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           onNodeClick={onNodeClick}
+          onNodeMouseEnter={onNodeMouseEnter}
+          onNodeMouseLeave={onNodeMouseLeave}
           onEdgeClick={onEdgeClick}
           onPaneClick={onPaneClick}
           onNodeContextMenu={onNodeContextMenu}

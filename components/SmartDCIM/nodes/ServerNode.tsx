@@ -99,6 +99,7 @@ Model: ${data.model || 'N/A'}
         style={{
           width: `${width}px`,
           height: `${height}px`,
+          marginTop: '51px',
         }}
       >
           {/* 顶部：状态 + 图标 */}
@@ -198,6 +199,7 @@ Model: ${data.model || 'N/A'}
       style={{
         width: `${width}px`,
         height: `${height}px`,
+        marginTop: '47px',
       }}
     >
         {/* Decorative Grid Pattern */}

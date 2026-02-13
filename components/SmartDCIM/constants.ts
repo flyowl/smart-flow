@@ -9,3 +9,9 @@ export const RACK_HEADER_HEIGHT_PX = 50; // Header height including padding and 
 // Data defaults
 export const DEFAULT_RACK_U = 42;
 export const DEFAULT_SERVER_U = 2;
+
+// UDF (光纤架/网口架) dimensions
+export const UDF_WIDTH_PX = RACK_WIDTH_PX;
+export const UDF_HEIGHT_PX = 60;
+export const DEFAULT_FIBER_PORTS = 24;
+export const DEFAULT_NETWORK_PORTS = 24;
